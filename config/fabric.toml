@@ -1,0 +1,6 @@
+addr = "localhost:7053"
+event_filter = "interchain-event-name"
+username = "Admin"
+ccid = "broker"
+channel_id = "mychannel"
+org = "org2"
