@@ -16,8 +16,8 @@ require (
 	github.com/hyperledger/fabric-amcl v0.0.0-20200128223036-d1aa2665426a // indirect
 	github.com/hyperledger/fabric-lib-go v1.0.0 // indirect
 	github.com/hyperledger/fabric-sdk-go v1.0.0-alpha5
-	github.com/meshplus/bitxhub-kit v0.0.0-20200329124935-585edb85ca63
-	github.com/meshplus/bitxhub-model v0.0.0-20200329125320-a37501c7a13e
+	github.com/meshplus/bitxhub-kit v1.0.0-rc1
+	github.com/meshplus/bitxhub-model v1.0.0-rc1
 	github.com/meshplus/pier v0.0.0-00010101000000-000000000000
 	github.com/miekg/pkcs11 v1.0.3 // indirect
 	github.com/op/go-logging v0.0.0-20160315200505-970db520ece7 // indirect
