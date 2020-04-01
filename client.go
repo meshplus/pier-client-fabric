@@ -383,44 +383,6 @@ func (c *Client) CommitCallback(ibtp *pb.IBTP) error {
 	return nil
 }
 
-func (c *Client) unpackRet(response *channel.Response) (*peer.ChaincodeAction, error) {
-	txHash := response.Payload
-
-	l, err := ledger.New(c.consumer.channelProvider)
-	if err != nil {
-		return nil, fmt.Errorf("new ledger: %w", err)
-	}
-	t, err := l.QueryTransaction(fab.TransactionID(txHash))
-	if err != nil {
-		return nil, fmt.Errorf("query tx: %w", err)
-	}
-
-	pd := &common.Payload{}
-	if err := proto.Unmarshal(t.TransactionEnvelope.Payload, pd); err != nil {
-		return nil, fmt.Errorf("unmarshal envelope: %w", err)
-	}
-	pt := &peer.Transaction{}
-	if err := proto.Unmarshal(pd.Data, pt); err != nil {
-		return nil, fmt.Errorf("unmarshal peer tx: %w", err)
-	}
-
-	action := &peer.ChaincodeActionPayload{}
-	if err := proto.Unmarshal(pt.Actions[0].Payload, action); err != nil {
-		return nil, fmt.Errorf("unmarshal action: %w", err)
-	}
-
-	payload := &peer.ProposalResponsePayload{}
-	if err := proto.Unmarshal(action.Action.ProposalResponsePayload, payload); err != nil {
-		return nil, fmt.Errorf("unmarshal proposal: %w", err)
-	}
-
-	result := &peer.ChaincodeAction{}
-	if err := proto.Unmarshal(payload.Extension, result); err != nil {
-		return nil, fmt.Errorf("unmarshal chaincode action: %w", err)
-	}
-	return result, nil
-}
-
 func (c *Client) unpackIBTP(response *channel.Response, ibtpType pb.IBTP_Type) (*pb.IBTP, error) {
 	ret := &Event{}
 	if err := json.Unmarshal(response.Payload, ret); err != nil {
