@@ -10,6 +10,11 @@ help: Makefile
 prepare:
 	cd scripts && bash prepare.sh
 
+## make test-coverage: Test project with cover
+test-coverage:
+	@go test -short -coverprofile cover.out -covermode=atomic ${TEST_PKGS}
+	@cat cover.out >> coverage.txt
+
 ## make fabric1.4: build fabric(1.4) client plugin
 fabric1.4:
 	mkdir -p build
