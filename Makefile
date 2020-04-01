@@ -7,6 +7,9 @@ help: Makefile
 	@echo "Choose a command run:"
 	@sed -n 's/^##//p' $< | column -t -s ':' | sed -e 's/^/ /'
 
+prepare:
+	cd scripts && bash prepare.sh
+
 ## make fabric1.4: build fabric(1.4) client plugin
 fabric1.4:
 	mkdir -p build
@@ -17,5 +20,5 @@ fabric1.4-linux:
 
 ## make linter: Run golanci-lint
 linter:
-	golangci-lint run -E goimports --skip-dirs-use-default -D staticcheck
+	golangci-lint run
 

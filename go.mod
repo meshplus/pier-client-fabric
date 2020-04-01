@@ -10,6 +10,7 @@ require (
 	github.com/cloudflare/cfssl v0.0.0-20180223231731-4e2dcbde5004
 	github.com/fsouza/go-dockerclient v1.6.3 // indirect
 	github.com/golang/protobuf v1.3.2
+	github.com/golangci/golangci-lint v1.23.0 // indirect
 	github.com/google/certificate-transparency-go v1.1.0 // indirect
 	github.com/hashicorp/go-version v1.2.0 // indirect
 	github.com/hyperledger/fabric v1.4.6
@@ -22,7 +23,7 @@ require (
 	github.com/miekg/pkcs11 v1.0.3 // indirect
 	github.com/op/go-logging v0.0.0-20160315200505-970db520ece7 // indirect
 	github.com/sirupsen/logrus v1.4.2
-	github.com/spf13/viper v1.4.0
+	github.com/spf13/viper v1.6.1
 	github.com/sykesm/zap-logfmt v0.0.3 // indirect
 )
 
