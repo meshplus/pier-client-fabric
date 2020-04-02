@@ -1,3 +1,10 @@
 .DS_Store
 build
 .idea
+*.so
+*.tar
+logs/*
+bin
+cover.out
+cover.html
+coverage.txt
