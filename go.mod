@@ -37,6 +37,8 @@ replace golang.org/x/text => golang.org/x/text v0.3.2
 
 replace github.com/spf13/afero => github.com/spf13/afero v1.1.2
 
+replace github.com/spf13/pflag => github.com/spf13/pflag v1.0.5
+
 replace github.com/pelletier/go-toml => github.com/pelletier/go-toml v1.2.0
 
 replace github.com/spf13/jwalterweatherman => github.com/spf13/jwalterweatherman v1.0.0
