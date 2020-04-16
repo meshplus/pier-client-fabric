@@ -17,6 +17,12 @@ type response struct {
 	Data    []byte `json:"data"`
 }
 
+type Tx struct {
+	sender   string
+	receiver string
+	amount   string
+}
+
 func successResponse(data []byte) pb.Response {
 	res := &response{
 		OK:   true,
