@@ -9,14 +9,10 @@ import (
 
 	"github.com/Rican7/retry"
 	"github.com/Rican7/retry/strategy"
-	"github.com/golang/protobuf/proto"
 	"github.com/hyperledger/fabric-sdk-go/pkg/client/channel"
-	"github.com/hyperledger/fabric-sdk-go/pkg/client/ledger"
 	"github.com/hyperledger/fabric-sdk-go/pkg/common/providers/fab"
 	"github.com/hyperledger/fabric/common/util"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
-	"github.com/hyperledger/fabric/protos/common"
-	"github.com/hyperledger/fabric/protos/peer"
 	"github.com/meshplus/bitxhub-kit/log"
 	"github.com/meshplus/bitxhub-model/pb"
 	"github.com/meshplus/pier/pkg/model"
@@ -167,44 +163,11 @@ func (c *Client) polling() {
 }
 
 func (c *Client) getProof(response channel.Response) ([]byte, error) {
-	var proof []byte
-	var handle = func(response channel.Response) ([]byte, error) {
-		// query proof from fabric
-		l, err := ledger.New(c.consumer.channelProvider)
-		if err != nil {
-			return nil, err
-		}
-
-		t, err := l.QueryTransaction(response.TransactionID)
-		if err != nil {
-			return nil, err
-		}
-		pd := &common.Payload{}
-		if err := proto.Unmarshal(t.TransactionEnvelope.Payload, pd); err != nil {
-			return nil, err
-		}
-
-		pt := &peer.Transaction{}
-		if err := proto.Unmarshal(pd.Data, pt); err != nil {
-			return nil, err
-		}
-
-		return pt.Actions[0].Payload, nil
+	b, err := json.Marshal(response)
+	if err != nil {
+		return nil, err
 	}
-
-	if err := retry.Retry(func(attempt uint) error {
-		var err error
-		proof, err = handle(response)
-		if err != nil {
-			logger.Errorf("can't get proof: %s", err.Error())
-			return err
-		}
-		return nil
-	}, strategy.Wait(2*time.Second)); err != nil {
-		logger.Panicf("can't get proof: %s", err.Error())
-	}
-
-	return proof, nil
+	return b, nil
 }
 
 func (c *Client) Stop() error {
@@ -285,10 +248,7 @@ func (c *Client) SubmitIBTP(ibtp *pb.IBTP) (*model.PluginResponse, error) {
 		newArgs = append(newArgs, pd.Args[0])
 		newArgs = append(newArgs, result...)
 	case "interchainCharge":
-		newArgs = append(newArgs, []byte("false"), pd.Args[0])
-		if response.OK {
-			newArgs[0] = []byte("true")
-		}
+		newArgs = append(newArgs, []byte(fmt.Sprintf("%v", response.OK)), pd.Args[0])
 		newArgs = append(newArgs, pd.Args[2:]...)
 	}
 
