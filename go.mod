@@ -3,28 +3,22 @@ module github.com/meshplus/pier-client-fabric
 go 1.13
 
 require (
-	github.com/Knetic/govaluate v3.0.0+incompatible // indirect
 	github.com/Rican7/retry v0.1.0
-	github.com/Shopify/sarama v1.26.1 // indirect
-	github.com/VividCortex/gohistogram v1.0.0 // indirect
 	github.com/cloudflare/cfssl v0.0.0-20180223231731-4e2dcbde5004
-	github.com/fsouza/go-dockerclient v1.6.3 // indirect
-	github.com/golang/protobuf v1.3.2
+	github.com/golang/protobuf v1.4.0
 	github.com/golangci/golangci-lint v1.23.0 // indirect
 	github.com/google/certificate-transparency-go v1.1.0 // indirect
-	github.com/hashicorp/go-version v1.2.0 // indirect
-	github.com/hyperledger/fabric v1.4.6
-	github.com/hyperledger/fabric-amcl v0.0.0-20200128223036-d1aa2665426a // indirect
+	github.com/hyperledger/fabric v2.0.1+incompatible
+	github.com/hyperledger/fabric-chaincode-go v0.0.0-20200511190512-bcfeb58dd83a
 	github.com/hyperledger/fabric-lib-go v1.0.0 // indirect
+	github.com/hyperledger/fabric-protos-go v0.0.0-20200330074707-cfe579e86986
 	github.com/hyperledger/fabric-sdk-go v1.0.0-alpha5
-	github.com/meshplus/bitxhub-kit v1.0.0-rc1
-	github.com/meshplus/bitxhub-model v1.0.0-rc2
+	github.com/meshplus/bitxhub-kit v1.0.1-0.20200511122821-bc96b0c1f6c7
+	github.com/meshplus/bitxhub-model v1.0.0-rc4.0.20200429111056-62b55c3d4260
 	github.com/meshplus/pier v0.0.0-00010101000000-000000000000
-	github.com/miekg/pkcs11 v1.0.3 // indirect
-	github.com/op/go-logging v0.0.0-20160315200505-970db520ece7 // indirect
-	github.com/sirupsen/logrus v1.4.2
+	github.com/sirupsen/logrus v1.5.0
 	github.com/spf13/viper v1.6.1
-	github.com/sykesm/zap-logfmt v0.0.3 // indirect
+	sigs.k8s.io/yaml v1.2.0 // indirect
 )
 
 replace gopkg.in/yaml.v2 => gopkg.in/yaml.v2 v2.2.7
