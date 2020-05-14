@@ -231,12 +231,16 @@ func (c *Client) SubmitIBTP(ibtp *pb.IBTP) (*model.PluginResponse, error) {
 	if err := pd.Unmarshal(ibtp.Payload); err != nil {
 		return ret, fmt.Errorf("ibtp payload unmarshal: %w", err)
 	}
+	content := &pb.Content{}
+	if err := content.Unmarshal(pd.Content); err != nil {
+		return ret, fmt.Errorf("ibtp content unmarshal: %w", err)
+	}
 
-	args := util.ToChaincodeArgs(ibtp.From, strconv.FormatUint(ibtp.Index, 10), pd.DstContractId)
-	args = append(args, pd.Args...)
+	args := util.ToChaincodeArgs(ibtp.From, strconv.FormatUint(ibtp.Index, 10), content.DstContractId)
+	args = append(args, content.Args...)
 	request := channel.Request{
 		ChaincodeID: c.meta.CCID,
-		Fcn:         pd.Func,
+		Fcn:         content.Func,
 		Args:        args,
 	}
 
@@ -271,7 +275,7 @@ func (c *Client) SubmitIBTP(ibtp *pb.IBTP) (*model.PluginResponse, error) {
 	ret.Message = response.Message
 
 	// If no callback function to invoke, then simply return
-	if pd.Callback == "" {
+	if content.Callback == "" {
 		return ret, nil
 	}
 
@@ -280,9 +284,9 @@ func (c *Client) SubmitIBTP(ibtp *pb.IBTP) (*model.PluginResponse, error) {
 		return ret, err
 	}
 
-	switch pd.Func {
+	switch content.Func {
 	case "interchainGet":
-		newArgs = append(newArgs, pd.Args[0])
+		newArgs = append(newArgs, content.Args[0])
 		newArgs = append(newArgs, result...)
 	case "interchainCharge":
 		newArgs = append(newArgs, []byte("false"))

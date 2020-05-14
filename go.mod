@@ -4,6 +4,7 @@ go 1.13
 
 require (
 	github.com/Rican7/retry v0.1.0
+	github.com/VividCortex/gohistogram v1.0.0 // indirect
 	github.com/cloudflare/cfssl v0.0.0-20180223231731-4e2dcbde5004
 	github.com/golang/protobuf v1.4.0
 	github.com/golangci/golangci-lint v1.23.0 // indirect
@@ -18,8 +19,11 @@ require (
 	github.com/meshplus/pier v0.0.0-00010101000000-000000000000
 	github.com/sirupsen/logrus v1.5.0
 	github.com/spf13/viper v1.6.1
-	sigs.k8s.io/yaml v1.2.0 // indirect
 )
+
+replace github.com/golang/protobuf => github.com/golang/protobuf v1.3.2
+
+replace google.golang.org/grpc => google.golang.org/grpc v1.28.1
 
 replace gopkg.in/yaml.v2 => gopkg.in/yaml.v2 v2.2.7
 

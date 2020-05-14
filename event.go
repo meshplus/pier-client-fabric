@@ -43,12 +43,20 @@ func (ev *Event) encryptPayload() ([]byte, error) {
 	for _, a := range as {
 		args = append(args, []byte(a))
 	}
-	ibtppd := &pb.Payload{
+	content := &pb.Content{
 		SrcContractId: ev.SrcContractID,
 		DstContractId: ev.DstContractID,
 		Func:          ev.Func,
 		Args:          args,
 		Callback:      ev.Callback,
+	}
+	data, err := content.Marshal()
+	if err != nil {
+		return nil, err
+	}
+
+	ibtppd := &pb.Payload{
+		Content: data,
 	}
 	return ibtppd.Marshal()
 }
