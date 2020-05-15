@@ -10,13 +10,13 @@ import (
 	"github.com/Rican7/retry"
 	"github.com/Rican7/retry/strategy"
 	"github.com/golang/protobuf/proto"
+	"github.com/hyperledger/fabric-chaincode-go/shim"
+	"github.com/hyperledger/fabric-protos-go/common"
+	"github.com/hyperledger/fabric-protos-go/peer"
 	"github.com/hyperledger/fabric-sdk-go/pkg/client/channel"
 	"github.com/hyperledger/fabric-sdk-go/pkg/client/ledger"
 	"github.com/hyperledger/fabric-sdk-go/pkg/common/providers/fab"
 	"github.com/hyperledger/fabric/common/util"
-	"github.com/hyperledger/fabric/core/chaincode/shim"
-	"github.com/hyperledger/fabric/protos/common"
-	"github.com/hyperledger/fabric/protos/peer"
 	"github.com/meshplus/bitxhub-kit/log"
 	"github.com/meshplus/bitxhub-model/pb"
 	"github.com/meshplus/pier/pkg/model"
@@ -231,12 +231,16 @@ func (c *Client) SubmitIBTP(ibtp *pb.IBTP) (*model.PluginResponse, error) {
 	if err := pd.Unmarshal(ibtp.Payload); err != nil {
 		return ret, fmt.Errorf("ibtp payload unmarshal: %w", err)
 	}
+	content := &pb.Content{}
+	if err := content.Unmarshal(pd.Content); err != nil {
+		return ret, fmt.Errorf("ibtp content unmarshal: %w", err)
+	}
 
-	args := util.ToChaincodeArgs(ibtp.From, strconv.FormatUint(ibtp.Index, 10), pd.DstContractId)
-	args = append(args, pd.Args...)
+	args := util.ToChaincodeArgs(ibtp.From, strconv.FormatUint(ibtp.Index, 10), content.DstContractId)
+	args = append(args, content.Args...)
 	request := channel.Request{
 		ChaincodeID: c.meta.CCID,
-		Fcn:         pd.Func,
+		Fcn:         content.Func,
 		Args:        args,
 	}
 
@@ -271,7 +275,7 @@ func (c *Client) SubmitIBTP(ibtp *pb.IBTP) (*model.PluginResponse, error) {
 	ret.Message = response.Message
 
 	// If no callback function to invoke, then simply return
-	if pd.Callback == "" {
+	if content.Callback == "" {
 		return ret, nil
 	}
 
@@ -280,9 +284,9 @@ func (c *Client) SubmitIBTP(ibtp *pb.IBTP) (*model.PluginResponse, error) {
 		return ret, err
 	}
 
-	switch pd.Func {
+	switch content.Func {
 	case "interchainGet":
-		newArgs = append(newArgs, pd.Args[0])
+		newArgs = append(newArgs, content.Args[0])
 		newArgs = append(newArgs, result...)
 	case "interchainCharge":
 		newArgs = append(newArgs, []byte("false"))
