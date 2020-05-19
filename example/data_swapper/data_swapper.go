@@ -13,6 +13,7 @@ const (
 	channelID            = "mychannel"
 	brokerContractName   = "broker"
 	interchainInvokeFunc = "InterchainDataSwapInvoke"
+	interchain           = "interchain-"
 )
 
 type DataSwapper struct{}
@@ -32,6 +33,8 @@ func (s *DataSwapper) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		return s.interchainGet(stub, args)
 	case "interchainSet":
 		return s.interchainSet(stub, args)
+	case "interchainLocalGet":
+		return s.interchainLocalGet(stub, args)
 	case "get":
 		return s.get(stub, args)
 	case "set":
@@ -94,7 +97,21 @@ func (s *DataSwapper) set(stub shim.ChaincodeStubInterface, args []string) pb.Re
 
 // interchainSet is the callback function getting data by interchain
 func (s *DataSwapper) interchainSet(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	if len(args) != 2 {
+		return shim.Error("incorrect number of arguments")
+	}
+
+	args[0] = interchainKey(args[0])
 	return s.set(stub, args)
+}
+
+// interchainLocalGet gets local interchain data after invoking interchainGet
+func (s *DataSwapper) interchainLocalGet(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	if len(args) != 1 {
+		return shim.Error("incorrect number of arguments")
+	}
+	args[0] = interchainKey(args[0])
+	return s.get(stub, args)
 }
 
 // interchainGet gets data by interchain
@@ -106,6 +123,9 @@ func (s *DataSwapper) interchainGet(stub shim.ChaincodeStubInterface, args []str
 	return shim.Success(value)
 }
 
+func interchainKey(key string) string {
+	return interchain + key
+}
 func main() {
 	err := shim.Start(new(DataSwapper))
 	if err != nil {
