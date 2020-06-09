@@ -23,7 +23,7 @@ require (
 
 replace github.com/golang/protobuf => github.com/golang/protobuf v1.3.2
 
-replace google.golang.org/grpc => google.golang.org/grpc v1.28.1
+replace google.golang.org/grpc => google.golang.org/grpc v1.27.1
 
 replace gopkg.in/yaml.v2 => gopkg.in/yaml.v2 v2.2.7
 
@@ -32,6 +32,8 @@ replace golang.org/x/net => golang.org/x/net v0.0.0-20200202094626-16171245cfb2
 replace github.com/meshplus/pier => ../pier
 
 replace golang.org/x/text => golang.org/x/text v0.3.0
+
+replace golang.org/x/sys => golang.org/x/sys v0.0.0-20200509044756-6aff5f38e54f
 
 replace github.com/spf13/afero => github.com/spf13/afero v1.1.2
 
