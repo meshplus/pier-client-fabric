@@ -14,8 +14,8 @@ require (
 	github.com/hyperledger/fabric-lib-go v1.0.0 // indirect
 	github.com/hyperledger/fabric-protos-go v0.0.0-20200330074707-cfe579e86986
 	github.com/hyperledger/fabric-sdk-go v1.0.0-alpha5
-	github.com/meshplus/bitxhub-kit v1.0.1-0.20200511122821-bc96b0c1f6c7
-	github.com/meshplus/bitxhub-model v1.0.0-rc4.0.20200429111056-62b55c3d4260
+	github.com/meshplus/bitxhub-kit v1.0.1-0.20200525112026-df2160653e23
+	github.com/meshplus/bitxhub-model v1.0.0-rc4.0.20200608065824-2fbc63639e92
 	github.com/meshplus/pier v0.0.0-00010101000000-000000000000
 	github.com/sirupsen/logrus v1.5.0
 	github.com/spf13/viper v1.6.1
@@ -23,7 +23,7 @@ require (
 
 replace github.com/golang/protobuf => github.com/golang/protobuf v1.3.2
 
-replace google.golang.org/grpc => google.golang.org/grpc v1.28.1
+replace google.golang.org/grpc => google.golang.org/grpc v1.27.1
 
 replace gopkg.in/yaml.v2 => gopkg.in/yaml.v2 v2.2.7
 
@@ -32,6 +32,8 @@ replace golang.org/x/net => golang.org/x/net v0.0.0-20200202094626-16171245cfb2
 replace github.com/meshplus/pier => ../pier
 
 replace golang.org/x/text => golang.org/x/text v0.3.0
+
+replace golang.org/x/sys => golang.org/x/sys v0.0.0-20200509044756-6aff5f38e54f
 
 replace github.com/spf13/afero => github.com/spf13/afero v1.1.2
 

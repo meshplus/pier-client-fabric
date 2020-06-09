@@ -125,7 +125,7 @@ organizations:
 #
 orderers:
   orderer.example.com:
-    url: grpcs://10.1.16.48:7050
+    url: grpcs://host.docker.internal:7050
 
     # these are standard properties defined by the gRPC library
     # they will be passed in as-is to gRPC client constructor
@@ -152,8 +152,8 @@ orderers:
 peers:
   peer0.org1.example.com:
     # this URL is used to send endorsement and query requests
-    url: grpcs://10.1.16.48:7051
-    eventUrl: grpcs://10.1.16.48:7053
+    url: grpcs://host.docker.internal:7051
+    eventUrl: grpcs://host.docker.internal:7053
     grpcOptions:
       ssl-target-name-override: peer0.org1.example.com
       # These parameters should be set in coordination with the keepalive policy on the server,
@@ -172,8 +172,8 @@ peers:
 
   peer1.org1.example.com:
     # this URL is used to send endorsement and query requests
-    url: grpcs://10.1.16.48:8051
-    eventUrl: grpcs://10.1.16.48:8053
+    url: grpcs://host.docker.internal:8051
+    eventUrl: grpcs://host.docker.internal:8053
     grpcOptions:
       ssl-target-name-override: peer1.org1.example.com
       # These parameters should be set in coordination with the keepalive policy on the server,
@@ -192,8 +192,8 @@ peers:
 
   peer0.org2.example.com:
     # this URL is used to send endorsement and query requests
-    url: grpcs://10.1.16.48:9051
-    eventUrl: grpcs://10.1.16.48:9053
+    url: grpcs://host.docker.internal:9051
+    eventUrl: grpcs://host.docker.internal:9053
     grpcOptions:
       ssl-target-name-override: peer0.org2.example.com
       # These parameters should be set in coordination with the keepalive policy on the server,
@@ -212,8 +212,8 @@ peers:
 
   peer1.org2.example.com:
     # this URL is used to send endorsement and query requests
-    url: grpcs://10.1.16.48:10051
-    eventUrl: grpcs://10.1.16.48:10053
+    url: grpcs://host.docker.internal:10051
+    eventUrl: grpcs://host.docker.internal:10053
     grpcOptions:
       ssl-target-name-override: peer1.org2.example.com
       # These parameters should be set in coordination with the keepalive policy on the server,
@@ -270,27 +270,27 @@ peers:
 entityMatchers:
   peer:
   - pattern: (\w*)peer0.org1.example.com:(\w*)
-    urlSubstitutionExp: grpcs://10.1.16.48:7051
-    eventUrlSubstitutionExp: grpcs://10.1.16.48:7053
+    urlSubstitutionExp: grpcs://host.docker.internal:7051
+    eventUrlSubstitutionExp: grpcs://host.docker.internal:7053
     sslTargetOverrideUrlSubstitutionExp: peer0.org1.example.com
     mappedHost: peer0.org1.example.com
 
 
   - pattern: (\w*)peer1.org1.example.com:(\w*)
-    urlSubstitutionExp: grpcs://10.1.16.48:8051
-    eventUrlSubstitutionExp: grpcs://10.1.16.48:8053
+    urlSubstitutionExp: grpcs://host.docker.internal:8051
+    eventUrlSubstitutionExp: grpcs://host.docker.internal:8053
     sslTargetOverrideUrlSubstitutionExp: peer1.org1.example.com
     mappedHost: peer1.org1.example.com
 
   - pattern: (\w*)peer0.org2.example.com:(\w*)
-    urlSubstitutionExp: grpcs://10.1.16.48:9051
-    eventUrlSubstitutionExp: grpcs://10.1.16.48:9053
+    urlSubstitutionExp: grpcs://host.docker.internal:9051
+    eventUrlSubstitutionExp: grpcs://host.docker.internal:9053
     sslTargetOverrideUrlSubstitutionExp: peer0.org2.example.com
     mappedHost: peer0.org2.example.com
 
   - pattern: (\w*)peer1.org2.example.com:(\w*)
-    urlSubstitutionExp: grpcs://10.1.16.48:10051
-    eventUrlSubstitutionExp: grpcs://10.1.16.48:10053
+    urlSubstitutionExp: grpcs://host.docker.internal:10051
+    eventUrlSubstitutionExp: grpcs://host.docker.internal:10053
     sslTargetOverrideUrlSubstitutionExp: peer1.org2.example.com
     mappedHost: peer1.org2.example.com
 
@@ -323,6 +323,6 @@ entityMatchers:
   #entityMatchers:
   orderer:
   - pattern: (\w*)orderer.example.com(\w*)
-    urlSubstitutionExp: grpcs://10.1.16.48:7050
+    urlSubstitutionExp: grpcs://host.docker.internal:7050
     sslTargetOverrideUrlSubstitutionExp: orderer.example.com
     mappedHost: orderer.example.com
