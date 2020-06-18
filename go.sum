@@ -278,6 +278,7 @@ github.com/huin/goupnp v1.0.0/go.mod h1:n9v9KO1tAxYH82qOn+UTIFQDmx5n1Zxd/ClZDMX7
 github.com/huin/goutil v0.0.0-20170803182201-1ca381bf3150/go.mod h1:PpLOETDnJ0o3iZrZfqZzyLl6l7F3c6L1oWn7OICBi6o=
 github.com/hyperledger/fabric v2.0.1+incompatible h1:7W+yG0gLKTC7NLcWPT3vfpnaseztPpH9wXGfAW7yvBs=
 github.com/hyperledger/fabric v2.0.1+incompatible/go.mod h1:tGFAOCT696D3rG0Vofd2dyWYLySHlh0aQjf7Q1HAju0=
+github.com/hyperledger/fabric v2.1.1+incompatible h1:cYYRv3vVg4kA6DmrixLxwn1nwBEUuYda8DsMwlaMKbY=
 github.com/hyperledger/fabric-amcl v0.0.0-20200128223036-d1aa2665426a h1:HgdNn3UYz8PdcZrLEk0IsSU4LRHp7yY2rgjIKcSiJaA=
 github.com/hyperledger/fabric-amcl v0.0.0-20200128223036-d1aa2665426a/go.mod h1:X+DIyUsaTmalOpmpQfIvFZjKHQedrURQ5t4YqquX7lE=
 github.com/hyperledger/fabric-chaincode-go v0.0.0-20200511190512-bcfeb58dd83a h1:KoFw2HnRfW+EItMP0zvUUl1FGzDb/7O0ov7uXZffQok=

@@ -52,11 +52,4 @@ ENV APPCHAIN_NAME=fabric
 
 EXPOSE 44555 44544
 
-# run pier inside container using:
-# docker run -t --env APPCHAIN_NAME=ether \
-# -v your/path/to/rule:/root/.pier/validating.wasm \
-# -v your/path/to/pier.toml:/root/.pier/pier.toml \
-# -v your/path/to/plugin_config:/root/.pier/ether \
-# pier-fabric
-
 ENTRYPOINT ["/root/docker_entrypoint.sh", "$APPCHAIN_NAME"]
