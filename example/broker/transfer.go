@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -60,7 +59,8 @@ func (broker *Broker) interchainConfirm(stub shim.ChaincodeStubInterface, args [
 	sequenceNum := args[1]
 	targetCID := args[2]
 	status := args[3]
-	uuid := args[4]
+	receiver := args[4]
+	amount := args[5]
 
 	if err := broker.checkIndex(stub, sourceChainID, sequenceNum, callbackMeta); err != nil {
 		return errorResponse(err.Error())
@@ -80,21 +80,12 @@ func (broker *Broker) interchainConfirm(stub shim.ChaincodeStubInterface, args [
 		return successResponse(nil)
 	}
 
-	val, err := stub.GetState(uuid)
-	if err != nil {
-		return shim.Error(err.Error())
-	}
-	originalTx := &Tx{}
-	if err = json.Unmarshal(val, originalTx); err != nil {
-		return shim.Error(err.Error())
-	}
-
 	splitedCID := strings.Split(targetCID, delimiter)
 	if len(splitedCID) != 2 {
 		return errorResponse(fmt.Sprintf("Target chaincode id %s is not valid", targetCID))
 	}
 
-	b := util.ToChaincodeArgs("interchainRollback", originalTx.receiver, originalTx.amount)
+	b := util.ToChaincodeArgs("interchainRollback", receiver, amount)
 	response := stub.InvokeChaincode(splitedCID[1], b, splitedCID[0])
 	if response.Status != shim.OK {
 		return errorResponse(fmt.Sprintf("invoke chaincode '%s' err: %s", splitedCID[1], response.Message))

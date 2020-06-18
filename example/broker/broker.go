@@ -139,23 +139,6 @@ func (broker *Broker) InterchainTransferInvoke(stub shim.ChaincodeStubInterface,
 
 	destChainID := args[0]
 	destAddr := args[1]
-	sender := args[2]
-	receiver := args[3]
-	amount := args[4]
-	outMeta, err := broker.getMap(stub, outterMeta)
-	if err != nil {
-		return shim.Error(err.Error())
-	}
-
-	uuid := destChainID + "-" + strconv.FormatUint(outMeta[destChainID]+1, 10)
-	b, err := json.Marshal(&Tx{
-		sender:   sender,
-		receiver: receiver,
-		amount:   amount,
-	})
-	if err = stub.PutState(uuid, b); err != nil {
-		return shim.Error(err.Error())
-	}
 
 	newArgs := make([]string, 0)
 	newArgs = append(newArgs, destChainID, cid, destAddr, "interchainCharge", strings.Join(args[2:], ","), "interchainConfirm")

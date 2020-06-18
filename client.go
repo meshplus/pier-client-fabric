@@ -289,11 +289,8 @@ func (c *Client) SubmitIBTP(ibtp *pb.IBTP) (*model.PluginResponse, error) {
 		newArgs = append(newArgs, content.Args[0])
 		newArgs = append(newArgs, result...)
 	case "interchainCharge":
-		newArgs = append(newArgs, []byte("false"))
-		if response.OK {
-			newArgs[0] = []byte("true")
-		}
-		newArgs = append(newArgs, []byte(fmt.Sprintf("%s-%d", ibtp.To, ibtp.Index)))
+		newArgs = append(newArgs, []byte(strconv.FormatBool(response.OK)), content.Args[0])
+		newArgs = append(newArgs, content.Args[2:]...)
 	}
 
 	ret.Result, err = c.generateCallback(ibtp, newArgs, proof)
