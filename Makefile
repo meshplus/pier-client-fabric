@@ -24,7 +24,7 @@ docker:
 	mkdir -p build
 	cd build && rm -rf pier && cp -r ../../pier pier
 	cd ${CURRENT_PATH}
-	docker build -t pier-fabric .
+	docker build -t meshplus/pier-fabric .
 
 fabric1.4-linux:
 	cd scripts && sh cross_compile.sh linux-amd64 ${CURRENT_PATH}
