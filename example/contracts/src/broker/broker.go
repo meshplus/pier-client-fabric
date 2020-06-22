@@ -6,9 +6,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hyperledger/fabric-chaincode-go/pkg/cid"
-	"github.com/hyperledger/fabric-chaincode-go/shim"
-	pb "github.com/hyperledger/fabric-protos-go/peer"
+	"github.com/hyperledger/fabric/core/chaincode/lib/cid"
+	"github.com/hyperledger/fabric/core/chaincode/shim"
+	pb "github.com/hyperledger/fabric/protos/peer"
 )
 
 const (
@@ -137,28 +137,8 @@ func (broker *Broker) InterchainTransferInvoke(stub shim.ChaincodeStubInterface,
 		return shim.Error(err.Error())
 	}
 
-	destChainID := args[0]
-	destAddr := args[1]
-	sender := args[2]
-	receiver := args[3]
-	amount := args[4]
-	outMeta, err := broker.getMap(stub, outterMeta)
-	if err != nil {
-		return shim.Error(err.Error())
-	}
-
-	uuid := destChainID + "-" + strconv.FormatUint(outMeta[destChainID]+1, 10)
-	b, err := json.Marshal(&Tx{
-		sender:   sender,
-		receiver: receiver,
-		amount:   amount,
-	})
-	if err = stub.PutState(uuid, b); err != nil {
-		return shim.Error(err.Error())
-	}
-
 	newArgs := make([]string, 0)
-	newArgs = append(newArgs, destChainID, cid, destAddr, "interchainCharge", strings.Join(args[2:], ","), "interchainConfirm")
+	newArgs = append(newArgs, args[0], cid, args[1], "interchainCharge", strings.Join(args[2:], ","), "interchainConfirm")
 
 	return broker.InterchainInvoke(stub, newArgs)
 }
@@ -216,9 +196,6 @@ func (broker *Broker) InterchainInvoke(stub shim.ChaincodeStubInterface, args []
 	}
 
 	txValue, err := json.Marshal(tx)
-	if err != nil {
-		return shim.Error(err.Error())
-	}
 
 	// persist out message
 	key := broker.outMsgKey(tx.DstChainID, strconv.FormatUint(tx.Index, 10))
