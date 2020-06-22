@@ -291,6 +291,8 @@ func (c *Client) SubmitIBTP(ibtp *pb.IBTP) (*model.PluginResponse, error) {
 	case "interchainCharge":
 		newArgs = append(newArgs, []byte(strconv.FormatBool(response.OK)), content.Args[0])
 		newArgs = append(newArgs, content.Args[2:]...)
+	default:
+		newArgs = append(newArgs, result...)
 	}
 
 	ret.Result, err = c.generateCallback(ibtp, newArgs, proof)
@@ -335,10 +337,10 @@ func (c *Client) GetInMessage(from string, index uint64) ([][]byte, error) {
 	return util.ToChaincodeArgs(results...), nil
 }
 
-func (c *Client) GetInMeta() (map[string]uint64, error) {
+func (c *Client) getMeta(method string) (map[string]uint64, error) {
 	request := channel.Request{
 		ChaincodeID: c.meta.CCID,
-		Fcn:         GetInnerMetaMethod,
+		Fcn:         method,
 	}
 
 	var response channel.Response
@@ -348,36 +350,18 @@ func (c *Client) GetInMeta() (map[string]uint64, error) {
 	}
 
 	return c.unpackMap(response)
+}
+
+func (c *Client) GetInMeta() (map[string]uint64, error) {
+	return c.getMeta(GetInnerMetaMethod)
 }
 
 func (c *Client) GetOutMeta() (map[string]uint64, error) {
-	request := channel.Request{
-		ChaincodeID: c.meta.CCID,
-		Fcn:         GetOutMetaMethod,
-	}
-
-	var response channel.Response
-	response, err := c.consumer.ChannelClient.Execute(request)
-	if err != nil {
-		return nil, err
-	}
-
-	return c.unpackMap(response)
+	return c.getMeta(GetOutMetaMethod)
 }
 
 func (c Client) GetCallbackMeta() (map[string]uint64, error) {
-	request := channel.Request{
-		ChaincodeID: c.meta.CCID,
-		Fcn:         GetCallbackMetaMethod,
-	}
-
-	var response channel.Response
-	response, err := c.consumer.ChannelClient.Execute(request)
-	if err != nil {
-		return nil, err
-	}
-
-	return c.unpackMap(response)
+	return c.getMeta(GetCallbackMetaMethod)
 }
 
 func (c *Client) CommitCallback(ibtp *pb.IBTP) error {
