@@ -7,20 +7,14 @@ import (
 	"strconv"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/hyperledger/fabric-chaincode-go/shim"
-	pb "github.com/hyperledger/fabric-protos-go/peer"
+	"github.com/hyperledger/fabric/core/chaincode/shim"
+	pb "github.com/hyperledger/fabric/protos/peer"
 )
 
 type response struct {
 	OK      bool   `json:"ok"`
 	Message string `json:"message"`
 	Data    []byte `json:"data"`
-}
-
-type Tx struct {
-	sender   string
-	receiver string
-	amount   string
 }
 
 func successResponse(data []byte) pb.Response {
