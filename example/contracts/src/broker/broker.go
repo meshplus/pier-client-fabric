@@ -196,6 +196,9 @@ func (broker *Broker) InterchainInvoke(stub shim.ChaincodeStubInterface, args []
 	}
 
 	txValue, err := json.Marshal(tx)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
 
 	// persist out message
 	key := broker.outMsgKey(tx.DstChainID, strconv.FormatUint(tx.Index, 10))
