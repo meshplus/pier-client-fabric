@@ -1,4 +1,4 @@
-addr = "localhost:7053"
+addr = "host.docker.internal:7053"
 event_filter = "interchain-event-name"
 username = "Admin"
 ccid = "broker"

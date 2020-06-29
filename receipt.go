@@ -7,7 +7,7 @@ import (
 	"github.com/meshplus/bitxhub-model/pb"
 )
 
-func (c *Client) generateCallback(original *pb.IBTP, args [][]byte, proof []byte) (result *pb.IBTP, err error) {
+func (c *Client) generateCallback(original *pb.IBTP, args [][]byte, proof []byte, status bool) (result *pb.IBTP, err error) {
 	if original == nil {
 		return nil, fmt.Errorf("got nil ibtp to generate receipt: %w", err)
 	}
@@ -40,11 +40,16 @@ func (c *Client) generateCallback(original *pb.IBTP, args [][]byte, proof []byte
 		return nil, err
 	}
 
+	typ := pb.IBTP_RECEIPT_SUCCESS
+	if !status {
+		typ = pb.IBTP_RECEIPT_FAILURE
+	}
+
 	return &pb.IBTP{
 		From:      original.From,
 		To:        original.To,
 		Index:     original.Index,
-		Type:      pb.IBTP_RECEIPT,
+		Type:      typ,
 		Timestamp: time.Now().UnixNano(),
 		Proof:     proof,
 		Payload:   pdb,
