@@ -10,6 +10,7 @@ import (
 	"github.com/Rican7/retry"
 	"github.com/Rican7/retry/strategy"
 	"github.com/golang/protobuf/proto"
+	"github.com/hashicorp/go-plugin"
 	"github.com/hyperledger/fabric-chaincode-go/shim"
 	"github.com/hyperledger/fabric-protos-go/common"
 	"github.com/hyperledger/fabric-protos-go/peer"
@@ -19,7 +20,6 @@ import (
 	"github.com/hyperledger/fabric/common/util"
 	"github.com/meshplus/bitxhub-kit/log"
 	"github.com/meshplus/bitxhub-model/pb"
-	"github.com/meshplus/pier/pkg/model"
 	"github.com/meshplus/pier/pkg/plugins/client"
 	"github.com/sirupsen/logrus"
 )
@@ -57,14 +57,14 @@ type Client struct {
 	done     chan bool
 }
 
-func NewClient(configPath, pierId string, extra []byte) (client.Client, error) {
+func (c *Client) Initialize(configPath, pierId string, extra []byte) error {
 	eventC := make(chan *pb.IBTP)
 	fabricConfig, err := UnmarshalConfig(configPath)
 	if err != nil {
-		return nil, fmt.Errorf("unmarshal config for plugin :%w", err)
+		return fmt.Errorf("unmarshal config for plugin :%w", err)
 	}
 
-	c := &ContractMeta{
+	contractmeta := &ContractMeta{
 		EventFilter: fabricConfig.EventFilter,
 		Username:    fabricConfig.Username,
 		CCID:        fabricConfig.CCID,
@@ -74,33 +74,33 @@ func NewClient(configPath, pierId string, extra []byte) (client.Client, error) {
 
 	m := make(map[string]uint64)
 	if err := json.Unmarshal(extra, &m); err != nil {
-		return nil, fmt.Errorf("unmarshal extra for plugin :%w", err)
+		return fmt.Errorf("unmarshal extra for plugin :%w", err)
 	}
 	if m == nil {
 		m = make(map[string]uint64)
 	}
 
-	mgh, err := newFabricHandler(c.EventFilter, eventC, pierId)
+	mgh, err := newFabricHandler(contractmeta.EventFilter, eventC, pierId)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	done := make(chan bool)
-	csm, err := NewConsumer(configPath, c, mgh, done)
+	csm, err := NewConsumer(configPath, contractmeta, mgh, done)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return &Client{
-		consumer: csm,
-		eventC:   eventC,
-		meta:     c,
-		pierId:   pierId,
-		name:     fabricConfig.Name,
-		outMeta:  m,
-		ticker:   time.NewTicker(2 * time.Second),
-		done:     done,
-	}, nil
+	c.consumer = csm
+	c.eventC = eventC
+	c.meta = contractmeta
+	c.pierId = pierId
+	c.name = fabricConfig.Name
+	c.outMeta = m
+	c.ticker = time.NewTicker(2 * time.Second)
+	c.done = done
+
+	return nil
 }
 
 func (c *Client) Start() error {
@@ -225,9 +225,9 @@ func (c *Client) GetIBTP() chan *pb.IBTP {
 	return c.eventC
 }
 
-func (c *Client) SubmitIBTP(ibtp *pb.IBTP) (*model.PluginResponse, error) {
+func (c *Client) SubmitIBTP(ibtp *pb.IBTP) (*pb.SubmitIBTPResponse, error) {
 	pd := &pb.Payload{}
-	ret := &model.PluginResponse{}
+	ret := &pb.SubmitIBTPResponse{}
 	if err := pd.Unmarshal(ibtp.Payload); err != nil {
 		return ret, fmt.Errorf("ibtp payload unmarshal: %w", err)
 	}
@@ -430,4 +430,14 @@ func (h *handler) HandleMessage(deliveries *fab.CCEvent, payload []byte) {
 
 		h.eventC <- e
 	}
+}
+
+func main() {
+	plugin.Serve(&plugin.ServeConfig{
+		HandshakeConfig: client.Handshake,
+		Plugins: map[string]plugin.Plugin{
+			"fabric-plugin": &client.AppchainGRPCPlugin{Impl: &Client{}},
+		},
+		GRPCServer: plugin.DefaultGRPCServer,
+	})
 }

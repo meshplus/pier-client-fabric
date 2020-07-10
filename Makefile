@@ -18,7 +18,7 @@ test-coverage:
 ## make fabric1.4: build fabric(1.4) client plugin
 fabric1.4:
 	mkdir -p build
-	$(GO) build --buildmode=plugin -o build/fabric-client-1.4.so ./*.go
+	$(GO) build -o build/fabric-client-1.4 ./*.go
 
 docker:
 	mkdir -p build
