@@ -20,13 +20,13 @@ import (
 	"github.com/hyperledger/fabric/common/util"
 	"github.com/meshplus/bitxhub-kit/log"
 	"github.com/meshplus/bitxhub-model/pb"
-	"github.com/meshplus/pier/pkg/plugins/client"
+	"github.com/meshplus/pier/pkg/plugins"
 	"github.com/sirupsen/logrus"
 )
 
 var logger = log.NewWithModule("client")
 
-var _ client.Client = (*Client)(nil)
+var _ plugins.Client = (*Client)(nil)
 
 const (
 	GetInnerMetaMethod    = "getInnerMeta"    // get last index of each source chain executing tx
@@ -434,10 +434,12 @@ func (h *handler) HandleMessage(deliveries *fab.CCEvent, payload []byte) {
 
 func main() {
 	plugin.Serve(&plugin.ServeConfig{
-		HandshakeConfig: client.Handshake,
+		HandshakeConfig: plugins.Handshake,
 		Plugins: map[string]plugin.Plugin{
-			"fabric-plugin": &client.AppchainGRPCPlugin{Impl: &Client{}},
+			plugins.PluginName: &plugins.AppchainGRPCPlugin{Impl: &Client{}},
 		},
 		GRPCServer: plugin.DefaultGRPCServer,
 	})
+
+	logger.Println("Plugin server down")
 }
