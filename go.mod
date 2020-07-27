@@ -14,7 +14,7 @@ require (
 	github.com/hyperledger/fabric-lib-go v1.0.0 // indirect
 	github.com/hyperledger/fabric-protos-go v0.0.0-20200330074707-cfe579e86986
 	github.com/hyperledger/fabric-sdk-go v1.0.0-alpha5
-	github.com/meshplus/bitxhub-kit v1.0.1-0.20200525112026-df2160653e23
+	github.com/meshplus/bitxhub-kit v1.0.1-0.20200727075316-ea098a3c3411
 	github.com/meshplus/bitxhub-model v1.0.0-rc4.0.20200608065824-2fbc63639e92
 	github.com/meshplus/pier v0.0.0-00010101000000-000000000000
 	github.com/sirupsen/logrus v1.5.0
