@@ -8,3 +8,4 @@ bin
 cover.out
 cover.html
 coverage.txt
+example/contracts/
