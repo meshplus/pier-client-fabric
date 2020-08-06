@@ -238,6 +238,11 @@ func (c *Client) SubmitIBTP(ibtp *pb.IBTP) (*pb.SubmitIBTPResponse, error) {
 
 	args := util.ToChaincodeArgs(ibtp.From, strconv.FormatUint(ibtp.Index, 10), content.DstContractId)
 	args = append(args, content.Args...)
+
+	if pb.IBTP_ASSET_EXCHANGE_REDEEM == ibtp.Type || pb.IBTP_ASSET_EXCHANGE_REFUND == ibtp.Type {
+		args = append(args, ibtp.Extra)
+	}
+
 	request := channel.Request{
 		ChaincodeID: c.meta.CCID,
 		Fcn:         content.Func,
@@ -284,6 +289,8 @@ func (c *Client) SubmitIBTP(ibtp *pb.IBTP) (*pb.SubmitIBTPResponse, error) {
 		return ret, err
 	}
 
+	responseStatus := true
+
 	switch content.Func {
 	case "interchainGet":
 		newArgs = append(newArgs, content.Args[0])
@@ -291,9 +298,14 @@ func (c *Client) SubmitIBTP(ibtp *pb.IBTP) (*pb.SubmitIBTPResponse, error) {
 	case "interchainCharge":
 		newArgs = append(newArgs, []byte(strconv.FormatBool(response.OK)), content.Args[0])
 		newArgs = append(newArgs, content.Args[2:]...)
+		responseStatus = response.OK
+	case "interchainAssetExchangeRedeem":
+		newArgs = append(newArgs, args[3:]...)
+	case "interchainAssetExchangeRefund":
+		newArgs = append(newArgs, args[3:]...)
 	}
 
-	ret.Result, err = c.generateCallback(ibtp, newArgs, proof)
+	ret.Result, err = c.generateCallback(ibtp, newArgs, proof, responseStatus)
 	if err != nil {
 		return nil, err
 	}
