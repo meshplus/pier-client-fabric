@@ -3,6 +3,11 @@ CURRENT_PATH = $(shell pwd)
 
 GO  = GO111MODULE=on go
 
+ifeq (docker,$(firstword $(MAKECMDGOALS)))
+  DOCKER_ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
+  $(eval $(DOCKER_ARGS):;@:)
+endif
+
 help: Makefile
 	@echo "Choose a command run:"
 	@sed -n 's/^##//p' $< | column -t -s ':' | sed -e 's/^/ /'
@@ -22,7 +27,7 @@ fabric1.4:
 
 docker:
 	mkdir -p build
-	cd build && rm -rf pier && cp -r ../../pier pier
+	cd build && rm -rf pier && git clone https://github.com/meshplus/pier.git && cd pier && git checkout $(DOCKER_ARGS)
 	cd ${CURRENT_PATH}
 	docker build -t meshplus/pier-fabric .
 
