@@ -197,7 +197,8 @@ func (broker *Broker) InterchainAssetExchangeRedeemInvoke(stub shim.ChaincodeStu
 	newArgs := make([]string, 0)
 	newArgs = append(newArgs, args[0], cid, args[1], "interchainAssetExchangeRedeem", args[2], "interchainAssetExchangeConfirm")
 
-	return broker.InterchainInvoke(stub, newArgs)
+	resp := broker.InterchainInvoke(stub, newArgs)
+	return broker.modifyIndex(stub, args, newArgs, resp)
 }
 
 func (broker *Broker) InterchainAssetExchangeRefundInvoke(stub shim.ChaincodeStubInterface, args []string) pb.Response {
@@ -212,7 +213,40 @@ func (broker *Broker) InterchainAssetExchangeRefundInvoke(stub shim.ChaincodeStu
 	newArgs := make([]string, 0)
 	newArgs = append(newArgs, args[0], cid, args[1], "interchainAssetExchangeRefund", args[2], "interchainAssetExchangeConfirm")
 
-	return broker.InterchainInvoke(stub, newArgs)
+	resp := broker.InterchainInvoke(stub, newArgs)
+	return broker.modifyIndex(stub, args, newArgs, resp)
+}
+
+func (broker *Broker) modifyIndex(stub shim.ChaincodeStubInterface, args []string, newArgs []string, resp pb.Response) pb.Response {
+	if resp.Status == shim.OK {
+		meta, err := broker.getMap(stub, callbackMeta)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+
+		outMeta, err := broker.getMap(stub, outterMeta)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+
+		inMeta, err := broker.getMap(stub, innerMeta)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+
+		if outMeta[args[0]] > inMeta[args[0]] {
+			meta[args[0]] = outMeta[args[0]] - 1
+		} else {
+			meta[args[0]] = inMeta[args[0]] - 1
+		}
+
+		err = broker.putMap(stub, callbackMeta, meta)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+	}
+
+	return resp
 }
 
 // InterchainInvoke
