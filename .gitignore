@@ -8,4 +8,7 @@ bin
 cover.out
 cover.html
 coverage.txt
-example/contracts/
+/example/contracts/src/asset_exchange/vendor/
+/example/contracts/src/broker/vendor/
+/example/contracts/src/data_swapper/vendor/
+/example/contracts/src/transfer/vendor/
