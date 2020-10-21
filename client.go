@@ -104,9 +104,12 @@ func NewClient(configPath, pierId string, extra []byte) (client.Client, error) {
 }
 
 func (c *Client) Start() error {
-	logger.Info("Fabric consumer started")
 	go c.polling()
-	return c.consumer.Start()
+	if err := c.consumer.Start(); err != nil {
+		return err
+	}
+	logger.Info("Fabric consumer started")
+	return nil
 }
 
 // polling event from broker
@@ -128,7 +131,7 @@ func (c *Client) polling() {
 			}
 
 			var response channel.Response
-			response, err = c.consumer.ChannelClient.Execute(request)
+			response, err = c.consumer.ChannelClient.Query(request)
 			if err != nil {
 				logger.WithFields(logrus.Fields{
 					"error": err.Error(),
@@ -139,11 +142,6 @@ func (c *Client) polling() {
 				continue
 			}
 
-			proof, err := c.getProof(response)
-			if err != nil {
-				continue
-			}
-
 			evs := make([]*Event, 0)
 			if err := json.Unmarshal(response.Payload, &evs); err != nil {
 				logger.WithFields(logrus.Fields{
@@ -151,7 +149,12 @@ func (c *Client) polling() {
 				}).Error("Unmarshal response payload")
 				continue
 			}
+
 			for _, ev := range evs {
+				proof, err := c.getProof(fab.TransactionID(ev.TxID))
+				if err != nil {
+					continue
+				}
 				ev.Proof = proof
 				c.eventC <- ev.Convert2IBTP(c.pierId, pb.IBTP_INTERCHAIN)
 				if c.outMeta == nil {
@@ -166,16 +169,16 @@ func (c *Client) polling() {
 	}
 }
 
-func (c *Client) getProof(response channel.Response) ([]byte, error) {
+func (c *Client) getProof(txID fab.TransactionID) ([]byte, error) {
 	var proof []byte
-	var handle = func(response channel.Response) ([]byte, error) {
+	var handle = func(txID fab.TransactionID) ([]byte, error) {
 		// query proof from fabric
 		l, err := ledger.New(c.consumer.channelProvider)
 		if err != nil {
 			return nil, err
 		}
 
-		t, err := l.QueryTransaction(response.TransactionID)
+		t, err := l.QueryTransaction(txID)
 		if err != nil {
 			return nil, err
 		}
@@ -194,7 +197,7 @@ func (c *Client) getProof(response channel.Response) ([]byte, error) {
 
 	if err := retry.Retry(func(attempt uint) error {
 		var err error
-		proof, err = handle(response)
+		proof, err = handle(txID)
 		if err != nil {
 			logger.Errorf("can't get proof: %s", err.Error())
 			return err
@@ -279,7 +282,7 @@ func (c *Client) SubmitIBTP(ibtp *pb.IBTP) (*model.PluginResponse, error) {
 		return ret, nil
 	}
 
-	proof, err = c.getProof(res)
+	proof, err = c.getProof(res.TransactionID)
 	if err != nil {
 		return ret, err
 	}

@@ -18,6 +18,7 @@ type Event struct {
 	Callback      string `json:"callback"`
 	Proof         []byte `json:"proof"`
 	Extra         []byte `json:"extra"`
+	TxID          string `json:"txid"`
 }
 
 func (ev *Event) Convert2IBTP(from string, ibtpType pb.IBTP_Type) *pb.IBTP {
