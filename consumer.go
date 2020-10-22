@@ -4,10 +4,9 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/golang/protobuf/proto"
 	"github.com/hyperledger/fabric-protos-go/common"
 	"github.com/hyperledger/fabric-protos-go/peer"
-
-	"github.com/golang/protobuf/proto"
 	"github.com/hyperledger/fabric-sdk-go/pkg/client/channel"
 	"github.com/hyperledger/fabric-sdk-go/pkg/client/event"
 	"github.com/hyperledger/fabric-sdk-go/pkg/client/ledger"
@@ -70,7 +69,6 @@ func (c *Consumer) Start() error {
 	}
 	c.registration = registration
 
-	// todo: add context
 	go func() {
 		for {
 			select {

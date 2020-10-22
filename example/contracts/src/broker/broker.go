@@ -33,6 +33,7 @@ type Event struct {
 	Func          string `json:"func"`
 	Args          string `json:"args"`
 	Callback      string `json:"callback"`
+	Txid          string `json:"txid"`
 }
 
 func (broker *Broker) Init(stub shim.ChaincodeStubInterface) pb.Response {
@@ -188,6 +189,7 @@ func (broker *Broker) InterchainInvoke(stub shim.ChaincodeStubInterface, args []
 		Func:          args[3],
 		Args:          args[4],
 		Callback:      args[5],
+		Txid:          stub.GetTxID(),
 	}
 
 	outMeta[tx.DstChainID]++
