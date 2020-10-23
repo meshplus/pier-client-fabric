@@ -1,19 +1,16 @@
 package main
 
 import (
-	ecdsa2 "crypto/ecdsa"
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-	"math/big"
 	"strconv"
 	"strings"
-
-	"github.com/meshplus/bitxhub-kit/crypto"
 
 	"github.com/hyperledger/fabric/common/util"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	pb "github.com/hyperledger/fabric/protos/peer"
+	"github.com/meshplus/bitxhub-kit/crypto"
 	"github.com/meshplus/bitxhub-kit/crypto/asym/ecdsa"
 )
 
@@ -523,11 +520,11 @@ func verifySignatures(assetExchangeID, status string, signatures []byte, validat
 	digest := sha256.Sum256([]byte(msg))
 	threshold := (len(validators) - 1) / 3
 	counter := 0
-	pubKeySigLen := 97 // 33 bytes pub key, 32 bytes R, 32 bytes S
+	sigLen := 65 // 32 bytes R, 32 bytes S, 1 byte V
 	addrs := make(map[string]bool)
 
-	for i := 0; i < len(signatures); i += pubKeySigLen {
-		sign := signatures[i : i+pubKeySigLen]
+	for i := 0; i < len(signatures); i += sigLen {
+		sign := signatures[i : i+sigLen]
 		addr, err := verifyECDSASign(sign, digest[:])
 		if err != nil {
 			continue
@@ -549,24 +546,16 @@ func verifySignatures(assetExchangeID, status string, signatures []byte, validat
 }
 
 func verifyECDSASign(sig, digest []byte) (string, error) {
-	pubBytes := sig[:33]
-	key, err := ecdsa.UnmarshalPublicKey(pubBytes, crypto.Secp256k1)
+	pubKeyBytes, err := ecdsa.Ecrecover(digest, sig)
+	if err != nil {
+		return "", err
+	}
+	pubkey, err := ecdsa.UnmarshalPublicKey(pubKeyBytes, crypto.Secp256k1)
 	if err != nil {
 		return "", err
 	}
 
-	pubKey := key.(*ecdsa.PublicKey)
-	byteR := sig[33:65]
-	byteS := sig[65:]
-
-	sigR := (&big.Int{}).SetBytes(byteR)
-	sigS := (&big.Int{}).SetBytes(byteS)
-
-	if !ecdsa2.Verify(pubKey.K, digest, sigR, sigS) {
-		return "", fmt.Errorf("invalid signature")
-	}
-
-	addr, err := pubKey.Address()
+	addr, err := pubkey.Address()
 	if err != nil {
 		return "", err
 	}
