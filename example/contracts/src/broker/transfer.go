@@ -5,12 +5,12 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/hyperledger/fabric-chaincode-go/shim"
+	pb "github.com/hyperledger/fabric-protos-go/peer"
 	"github.com/hyperledger/fabric/common/util"
-	"github.com/hyperledger/fabric/core/chaincode/shim"
-	pb "github.com/hyperledger/fabric/protos/peer"
 )
 
-// recharge for transfer contract: charge from,index,tid,name_id,amount
+// recharge for transfer contract: charge from,index,tid,name_id,amount,isRollback
 func (broker *Broker) interchainCharge(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	if len(args) < 6 {
 		return errorResponse("incorrect number of arguments, expecting 6")
@@ -21,13 +21,23 @@ func (broker *Broker) interchainCharge(stub shim.ChaincodeStubInterface, args []
 	sender := args[3]
 	receiver := args[4]
 	amount := args[5]
+	isRollback := args[6]
 
-	if err := broker.checkIndex(stub, sourceChainID, sequenceNum, innerMeta); err != nil {
-		return errorResponse(err.Error())
-	}
+	if isRollback != "true" {
+		if err := broker.checkIndex(stub, sourceChainID, sequenceNum, innerMeta); err != nil {
+			return errorResponse(err.Error())
+		}
 
-	if err := broker.markInCounter(stub, sourceChainID); err != nil {
-		return errorResponse(err.Error())
+		if err := broker.markInCounter(stub, sourceChainID); err != nil {
+			return errorResponse(err.Error())
+		}
+	} else {
+		if err := broker.checkRollbackIndex(stub, sourceChainID, sequenceNum, dstRollbackMeta); err != nil {
+			return errorResponse(err.Error())
+		}
+		if err := broker.markDstRollbackCounter(stub, sourceChainID, sequenceNum); err != nil {
+			return errorResponse(err.Error())
+		}
 	}
 
 	splitedCID := strings.Split(targetCID, delimiter)
@@ -35,7 +45,7 @@ func (broker *Broker) interchainCharge(stub shim.ChaincodeStubInterface, args []
 		return errorResponse(fmt.Sprintf("Target chaincode id %s is not valid", targetCID))
 	}
 
-	b := util.ToChaincodeArgs("interchainCharge", sender, receiver, amount)
+	b := util.ToChaincodeArgs("interchainCharge", sender, receiver, amount, isRollback)
 	response := stub.InvokeChaincode(splitedCID[1], b, splitedCID[0])
 	if response.Status != shim.OK {
 		return errorResponse(fmt.Sprintf("invoke chaincode '%s' err: %s", splitedCID[1], response.Message))
@@ -62,22 +72,29 @@ func (broker *Broker) interchainConfirm(stub shim.ChaincodeStubInterface, args [
 	receiver := args[4]
 	amount := args[5]
 
-	if err := broker.checkIndex(stub, sourceChainID, sequenceNum, callbackMeta); err != nil {
-		return errorResponse(err.Error())
-	}
-
-	idx, err := strconv.ParseUint(sequenceNum, 10, 64)
-	if err != nil {
-		return errorResponse(err.Error())
-	}
-
-	if err := broker.markCallbackCounter(stub, sourceChainID, idx); err != nil {
-		return errorResponse(err.Error())
-	}
-
 	// confirm interchain tx execution
 	if status == "true" {
+		if err := broker.checkIndex(stub, sourceChainID, sequenceNum, callbackMeta); err != nil {
+			return errorResponse(err.Error())
+		}
+
+		if err := broker.checkRollbackIndex(stub, sourceChainID, sequenceNum, srcRollbackMeta); err != nil {
+			return errorResponse(err.Error())
+		}
+
+		idx, err := strconv.ParseUint(sequenceNum, 10, 64)
+		if err != nil {
+			return errorResponse(err.Error())
+		}
+
+		if err := broker.markCallbackCounter(stub, sourceChainID, idx); err != nil {
+			return errorResponse(err.Error())
+		}
 		return successResponse(nil)
+	}
+
+	if err := broker.markSrcRollbackCounter(stub, sourceChainID, sequenceNum); err != nil {
+		return errorResponse(err.Error())
 	}
 
 	splitedCID := strings.Split(targetCID, delimiter)

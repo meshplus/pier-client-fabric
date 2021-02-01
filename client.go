@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -10,6 +12,7 @@ import (
 	"github.com/Rican7/retry"
 	"github.com/Rican7/retry/strategy"
 	"github.com/golang/protobuf/proto"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
 	"github.com/hyperledger/fabric-chaincode-go/shim"
 	"github.com/hyperledger/fabric-protos-go/common"
@@ -24,18 +27,27 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var logger = log.NewWithModule("client")
+var (
+	logger  = log.NewWithModule("client")
+	pLogger = hclog.New(&hclog.LoggerOptions{
+		Name:   "plugin",
+		Output: os.Stderr,
+		Level:  hclog.Trace,
+	})
+)
 
 var _ plugins.Client = (*Client)(nil)
 
 const (
-	GetInnerMetaMethod    = "getInnerMeta"    // get last index of each source chain executing tx
-	GetOutMetaMethod      = "getOuterMeta"    // get last index of each receiving chain crosschain event
-	GetCallbackMetaMethod = "getCallbackMeta" // get last index of each receiving chain callback tx
-	GetInMessageMethod    = "getInMessage"
-	GetOutMessageMethod   = "getOutMessage"
-	PollingEventMethod    = "pollingEvent"
-	FabricType            = "fabric"
+	GetInnerMetaMethod       = "getInnerMeta"       // get last index of each source chain executing tx
+	GetOutMetaMethod         = "getOuterMeta"       // get last index of each receiving chain crosschain event
+	GetCallbackMetaMethod    = "getCallbackMeta"    // get last index of each receiving chain callback tx
+	GetSrcRollbackMetaMethod = "getSrcRollbackMeta" // get last index of each receiving chain rollback tx
+	GetDstRollbackMetaMethod = "getDstRollbackMeta" // get last index of each source chain rollback tx
+	GetInMessageMethod       = "getInMessage"
+	GetOutMessageMethod      = "getOutMessage"
+	PollingEventMethod       = "pollingEvent"
+	FabricType               = "fabric"
 )
 
 type ContractMeta struct {
@@ -243,6 +255,11 @@ func (c *Client) SubmitIBTP(ibtp *pb.IBTP) (*pb.SubmitIBTPResponse, error) {
 		args = append(args, ibtp.Extra)
 	}
 
+	if ibtp.Type == pb.IBTP_ROLLBACK {
+		// use an unexist chaincode, so only inCounter will be increased
+		args[2] = []byte("0x0000000000000000000000000000000000ffffff")
+	}
+
 	request := channel.Request{
 		ChaincodeID: c.meta.CCID,
 		Fcn:         content.Func,
@@ -256,6 +273,10 @@ func (c *Client) SubmitIBTP(ibtp *pb.IBTP) (*pb.SubmitIBTPResponse, error) {
 	if err := retry.Retry(func(attempt uint) error {
 		res, err = c.consumer.ChannelClient.Execute(request)
 		if err != nil {
+			pLogger.Error("invoke contract gets error",
+				"func", content.Func,
+				"args", string(bytes.Join(args, []byte(","))),
+				"error", err)
 			if strings.Contains(err.Error(), "Chaincode status Code: (500)") {
 				res.ChaincodeStatus = shim.ERROR
 				return nil
@@ -265,7 +286,7 @@ func (c *Client) SubmitIBTP(ibtp *pb.IBTP) (*pb.SubmitIBTPResponse, error) {
 
 		return nil
 	}, strategy.Wait(2*time.Second)); err != nil {
-		logger.Panicf("Can't send rollback ibtp back to bitxhub: %s", err.Error())
+		logger.Panicf("can't send rollback ibtp back to bitxhub: %s", err.Error())
 	}
 
 	response := &Response{}
@@ -297,7 +318,7 @@ func (c *Client) SubmitIBTP(ibtp *pb.IBTP) (*pb.SubmitIBTPResponse, error) {
 		newArgs = append(newArgs, result...)
 	case "interchainCharge":
 		newArgs = append(newArgs, []byte(strconv.FormatBool(response.OK)), content.Args[0])
-		newArgs = append(newArgs, content.Args[2:]...)
+		newArgs = append(newArgs, content.Args[2:len(content.Args)-1]...)
 		responseStatus = response.OK
 	case "interchainAssetExchangeRedeem":
 		newArgs = append(newArgs, args[3:]...)
@@ -396,6 +417,108 @@ func (c *Client) CommitCallback(ibtp *pb.IBTP) error {
 	return nil
 }
 
+func (c *Client) RollbackIBTP(ibtp *pb.IBTP, isSrcChain bool) (*pb.RollbackIBTPResponse, error) {
+	ret := &pb.RollbackIBTPResponse{}
+	pd := &pb.Payload{}
+	if err := pd.Unmarshal(ibtp.Payload); err != nil {
+		return nil, fmt.Errorf("ibtp payload unmarshal: %w", err)
+	}
+	content := &pb.Content{}
+	if err := content.Unmarshal(pd.Content); err != nil {
+		return ret, fmt.Errorf("ibtp content unmarshal: %w", err)
+	}
+
+	// only support rollback for interchainCharge
+	if "interchainCharge" != content.Func {
+		return nil, nil
+	}
+
+	var rollbackArgs [][]byte
+	var rollbackFunc string
+	var args [][]byte
+	if isSrcChain {
+		rollbackFunc = content.Callback
+		rollbackArgs = append(rollbackArgs, []byte("false"), content.Args[0], content.Args[2])
+
+		args = util.ToChaincodeArgs(ibtp.To, strconv.FormatUint(ibtp.Index, 10), content.SrcContractId)
+		args = append(args, rollbackArgs...)
+	} else {
+		rollbackFunc = content.Func
+		args = util.ToChaincodeArgs(ibtp.From, strconv.FormatUint(ibtp.Index, 10), content.DstContractId)
+		args = append(args, content.Args...)
+		args[len(args)-1] = []byte("true")
+	}
+
+	request := channel.Request{
+		ChaincodeID: c.meta.CCID,
+		Fcn:         rollbackFunc,
+		Args:        args,
+	}
+
+	// retry executing
+	var res channel.Response
+	var err error
+	if err := retry.Retry(func(attempt uint) error {
+		res, err = c.consumer.ChannelClient.Execute(request)
+		if err != nil {
+			pLogger.Error("invoke contract gets error",
+				"func", content.Func,
+				"args", string(bytes.Join(args, []byte(","))),
+				"error", err)
+			if strings.Contains(err.Error(), "Chaincode status Code: (500)") {
+				res.ChaincodeStatus = shim.ERROR
+				return nil
+			}
+			return fmt.Errorf("execute request: %w", err)
+		}
+
+		return nil
+	}, strategy.Wait(2*time.Second)); err != nil {
+		logger.Panicf("can't send rollback ibtp back to bitxhub: %s", err.Error())
+	}
+
+	response := &Response{}
+	if err := json.Unmarshal(res.Payload, response); err != nil {
+		return nil, err
+	}
+
+	// if there is callback function, parse returned value
+	ret.Status = response.OK
+	ret.Message = response.Message
+
+	return ret, nil
+}
+
+func (c *Client) GetSrcRollbackMeta() (map[string]uint64, error) {
+	request := channel.Request{
+		ChaincodeID: c.meta.CCID,
+		Fcn:         GetSrcRollbackMetaMethod,
+	}
+
+	var response channel.Response
+	response, err := c.consumer.ChannelClient.Execute(request)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.unpackMap(response)
+}
+
+func (c *Client) GetDstRollbackMeta() (map[string]uint64, error) {
+	request := channel.Request{
+		ChaincodeID: c.meta.CCID,
+		Fcn:         GetDstRollbackMetaMethod,
+	}
+
+	var response channel.Response
+	response, err := c.consumer.ChannelClient.Execute(request)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.unpackMap(response)
+}
+
 func (c *Client) unpackIBTP(response *channel.Response, ibtpType pb.IBTP_Type) (*pb.IBTP, error) {
 	ret := &Event{}
 	if err := json.Unmarshal(response.Payload, ret); err != nil {
@@ -450,8 +573,9 @@ func main() {
 		Plugins: map[string]plugin.Plugin{
 			plugins.PluginName: &plugins.AppchainGRPCPlugin{Impl: &Client{}},
 		},
+		Logger:     pLogger,
 		GRPCServer: plugin.DefaultGRPCServer,
 	})
 
-	logger.Println("Plugin server down")
+	pLogger.Info("Plugin server down")
 }

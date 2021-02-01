@@ -6,9 +6,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hyperledger/fabric/core/chaincode/lib/cid"
-	"github.com/hyperledger/fabric/core/chaincode/shim"
-	pb "github.com/hyperledger/fabric/protos/peer"
+	"github.com/hyperledger/fabric-chaincode-go/pkg/cid"
+	"github.com/hyperledger/fabric-chaincode-go/shim"
+	pb "github.com/hyperledger/fabric-protos-go/peer"
 )
 
 const (
@@ -18,10 +18,15 @@ const (
 	callbackMeta        = "callback-meta"
 	whiteList           = "white-list"
 	adminList           = "admin-list"
+	accountWhiteList    = "account-white-list"
+	srcRollbackMeta     = "src-rollback-meta"
+	dstRollbackMeta     = "dst-rollback-meta"
 	passed              = "1"
 	rejected            = "2"
 	delimiter           = "&"
 )
+
+var accountList = []string{"Alice", "Bob"}
 
 type Broker struct{}
 
@@ -51,6 +56,15 @@ func (broker *Broker) Init(stub shim.ChaincodeStubInterface) pb.Response {
 	err = broker.putMap(stub, adminList, m)
 	if err != nil {
 		return shim.Error(fmt.Sprintf("Initialize admin list fail %s", err.Error()))
+	}
+
+	accountWhiteM := make(map[string]uint64)
+	for _, account := range accountList {
+		accountWhiteM[account] = 1
+	}
+	err = broker.putMap(stub, accountWhiteList, accountWhiteM)
+	if err != nil {
+		return shim.Error(fmt.Sprintf("Initialize account white list fail %s", err.Error()))
 	}
 
 	return broker.initialize(stub)
@@ -124,6 +138,8 @@ func (broker *Broker) initialize(stub shim.ChaincodeStubInterface) pb.Response {
 	inCounter := make(map[string]uint64)
 	outCounter := make(map[string]uint64)
 	callbackCounter := make(map[string]uint64)
+	dstRollbackCounter := make(map[string]uint64)
+	srcRollbackCounter := make(map[string]uint64)
 
 	if err := broker.putMap(stub, innerMeta, inCounter); err != nil {
 		return shim.Error(err.Error())
@@ -136,13 +152,19 @@ func (broker *Broker) initialize(stub shim.ChaincodeStubInterface) pb.Response {
 	if err := broker.putMap(stub, callbackMeta, callbackCounter); err != nil {
 		return shim.Error(err.Error())
 	}
+	if err := broker.putMap(stub, dstRollbackMeta, dstRollbackCounter); err != nil {
+		return shim.Error(err.Error())
+	}
+	if err := broker.putMap(stub, srcRollbackMeta, srcRollbackCounter); err != nil {
+		return shim.Error(err.Error())
+	}
 
 	return shim.Success(nil)
 }
 
 func (broker *Broker) InterchainTransferInvoke(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	if len(args) < 5 {
-		return shim.Error("incorrect number of arguments, expecting 5")
+	if len(args) < 6 {
+		return shim.Error("incorrect number of arguments, expecting 6")
 	}
 	cid, err := getChaincodeID(stub)
 	if err != nil {

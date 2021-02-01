@@ -45,6 +45,8 @@ func (c *Client) generateCallback(original *pb.IBTP, args [][]byte, proof []byte
 		if !status {
 			typ = pb.IBTP_RECEIPT_FAILURE
 		}
+	} else if original.Type == pb.IBTP_ROLLBACK {
+		typ = pb.IBTP_RECEIPT_ROLLBACK
 	} else {
 		typ = pb.IBTP_ASSET_EXCHANGE_RECEIPT
 	}

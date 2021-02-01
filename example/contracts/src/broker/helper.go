@@ -7,8 +7,8 @@ import (
 	"strconv"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/hyperledger/fabric/core/chaincode/shim"
-	pb "github.com/hyperledger/fabric/protos/peer"
+	"github.com/hyperledger/fabric-chaincode-go/shim"
+	pb "github.com/hyperledger/fabric-protos-go/peer"
 )
 
 type response struct {
@@ -114,6 +114,21 @@ func (broker *Broker) checkIndex(stub shim.ChaincodeStubInterface, addr string, 
 		return err
 	}
 	if idx != meta[addr]+1 {
+		return fmt.Errorf("incorrect index, expect %d", meta[addr]+1)
+	}
+	return nil
+}
+
+func (broker *Broker) checkRollbackIndex(stub shim.ChaincodeStubInterface, addr string, index string, metaName string) error {
+	idx, err := strconv.ParseUint(index, 10, 64)
+	if err != nil {
+		return err
+	}
+	meta, err := broker.getMap(stub, metaName)
+	if err != nil {
+		return err
+	}
+	if meta[addr] >= idx {
 		return fmt.Errorf("incorrect index, expect %d", meta[addr]+1)
 	}
 	return nil
