@@ -93,10 +93,22 @@ func (broker *Broker) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		return broker.getOuterMeta(stub)
 	case "getCallbackMeta":
 		return broker.getCallbackMeta(stub)
+	case "getSrcRollbackMeta":
+		return broker.getSrcRollbackMeta(stub)
+	case "getDstRollbackMeta":
+		return broker.getDstRollbackMeta(stub)
 	case "getInMessage":
 		return broker.getInMessage(stub, args)
 	case "getOutMessage":
 		return broker.getOutMessage(stub, args)
+	case "addAccount":
+		return broker.addAccount(stub, args)
+	case "removeAccount":
+		return broker.removeAccount(stub, args)
+	case "addAdmin":
+		return broker.addAdmin(stub, args)
+	case "removeAdmin":
+		return broker.removeAdmin(stub, args)
 	case "InterchainTransferInvoke":
 		return broker.InterchainTransferInvoke(stub, args)
 	case "InterchainDataSwapInvoke":
