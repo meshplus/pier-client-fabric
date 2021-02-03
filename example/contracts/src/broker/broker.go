@@ -182,7 +182,13 @@ func (broker *Broker) InterchainTransferInvoke(stub shim.ChaincodeStubInterface,
 	if err != nil {
 		return shim.Error(err.Error())
 	}
-
+	accountWhiteM, err := broker.getMap(stub, accountWhiteList)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	if _, ok := accountWhiteM[args[2]]; !ok {
+		return errorResponse("sender account is not allowed to invoke interchain transfer")
+	}
 	newArgs := make([]string, 0)
 	newArgs = append(newArgs, args[0], cid, args[1], "interchainCharge", strings.Join(args[2:], ","), "interchainConfirm")
 
