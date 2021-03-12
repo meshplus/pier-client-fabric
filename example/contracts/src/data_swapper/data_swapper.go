@@ -10,9 +10,9 @@ import (
 )
 
 const (
-	channelID            = "mychannel"
-	brokerContractName   = "broker"
-	interchainInvokeFunc = "InterchainDataSwapInvoke"
+	channelID               = "mychannel"
+	brokerContractName      = "broker"
+	emitInterchainEventFunc = "EmitInterchainEvent"
 )
 
 type DataSwapper struct{}
@@ -65,9 +65,8 @@ func (s *DataSwapper) get(stub shim.ChaincodeStubInterface, args []string) pb.Re
 		// args[0]: destination appchain id
 		// args[1]: destination contract address
 		// args[2]: key
-		b := util.ToChaincodeArgs(interchainInvokeFunc, args[0], args[1], args[2])
+		b := util.ToChaincodeArgs(emitInterchainEventFunc, args[0], args[1], "interchainGet", args[2], "interchainSet", args[2], "", "")
 		response := stub.InvokeChaincode(brokerContractName, b, channelID)
-
 		if response.Status != shim.OK {
 			return shim.Error(fmt.Errorf("invoke broker chaincode %s error: %s", brokerContractName, response.Message).Error())
 		}
