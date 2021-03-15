@@ -334,6 +334,7 @@ func (c *Client) InvokeInterchain(from string, index uint64, destAddr string, ca
 		if err != nil {
 			if strings.Contains(err.Error(), "Chaincode status Code: (500)") {
 				res.ChaincodeStatus = shim.ERROR
+				logger.Error("execute request failed", "err", err.Error())
 				return nil
 			}
 			return fmt.Errorf("execute request: %w", err)
@@ -343,6 +344,8 @@ func (c *Client) InvokeInterchain(from string, index uint64, destAddr string, ca
 	}, strategy.Wait(2*time.Second)); err != nil {
 		logger.Error("Can't send rollback ibtp back to bitxhub", "err", err.Error())
 	}
+
+	logger.Info("response", "cc status", strconv.Itoa(int(res.ChaincodeStatus)), "payload", string(res.Payload), res.ChaincodeStatus)
 
 	response := &Response{}
 	if err := json.Unmarshal(res.Payload, response); err != nil {
