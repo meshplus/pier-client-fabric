@@ -91,14 +91,12 @@ func (t *Transfer) transfer(stub shim.ChaincodeStubInterface, args []string) pb.
 		}
 
 		return shim.Success(nil)
-	case 5:
-		// args[0]: destination appchain id
-		// args[1]: destination contract address
-		dest := args[0]
-		address := args[1]
-		sender := args[2]
-		receiver := args[3]
-		amountArg := args[4]
+	case 4:
+		// args[0]: destination appchain contract did
+		destContractDID := args[0]
+		sender := args[1]
+		receiver := args[2]
+		amountArg := args[3]
 
 		amount, err := getAmountArg(amountArg)
 		if err != nil {
@@ -123,7 +121,7 @@ func (t *Transfer) transfer(stub shim.ChaincodeStubInterface, args []string) pb.
 
 		args := strings.Join([]string{sender, receiver, amountArg}, ",")
 		argsRb := strings.Join([]string{sender, amountArg}, ",")
-		b := util.ToChaincodeArgs(emitInterchainEventFunc, dest, address, "interchainCharge", args, "", "", "interchainRollback", argsRb)
+		b := util.ToChaincodeArgs(emitInterchainEventFunc, destContractDID, "interchainCharge", args, "", "", "interchainRollback", argsRb)
 		response := stub.InvokeChaincode(brokerContractName, b, channelID)
 		if response.Status != shim.OK {
 			return shim.Error(fmt.Errorf("invoke broker chaincode %s", response.Message).Error())
@@ -131,7 +129,7 @@ func (t *Transfer) transfer(stub shim.ChaincodeStubInterface, args []string) pb.
 
 		return shim.Success(nil)
 	default:
-		return shim.Error("incorrect number of arguments")
+		return shim.Error(fmt.Sprintf("incorrect number of arguments %d", len(args)))
 	}
 }
 

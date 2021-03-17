@@ -6,6 +6,7 @@ require (
 	github.com/OneOfOne/xxhash v1.2.5 // indirect
 	github.com/Rican7/retry v0.1.0
 	github.com/VividCortex/gohistogram v1.0.0 // indirect
+	github.com/bitxhub/bitxid v0.2.0
 	github.com/cloudflare/cfssl v0.0.0-20190409034051-768cd563887f
 	github.com/elastic/gosigar v0.8.1-0.20180330100440-37f05ff46ffa // indirect
 	github.com/ethereum/go-ethereum v1.9.18 // indirect
