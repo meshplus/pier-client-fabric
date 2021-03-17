@@ -61,11 +61,10 @@ func (s *DataSwapper) get(stub shim.ChaincodeStubInterface, args []string) pb.Re
 		}
 
 		return shim.Success(value)
-	case 3:
-		// args[0]: destination appchain id
-		// args[1]: destination contract address
-		// args[2]: key
-		b := util.ToChaincodeArgs(emitInterchainEventFunc, args[0], args[1], "interchainGet", args[2], "interchainSet", args[2], "", "")
+	case 2:
+		// args[0]: destination appchain contract did
+		// args[1]: key
+		b := util.ToChaincodeArgs(emitInterchainEventFunc, args[0], "interchainGet", args[2], "interchainSet", args[2], "", "")
 		response := stub.InvokeChaincode(brokerContractName, b, channelID)
 		if response.Status != shim.OK {
 			return shim.Error(fmt.Errorf("invoke broker chaincode %s error: %s", brokerContractName, response.Message).Error())

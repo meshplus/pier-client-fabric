@@ -8,11 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/go-hclog"
-
 	"github.com/Rican7/retry"
 	"github.com/Rican7/retry/strategy"
 	"github.com/golang/protobuf/proto"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
 	"github.com/hyperledger/fabric-chaincode-go/shim"
 	"github.com/hyperledger/fabric-protos-go/common"
@@ -22,6 +21,7 @@ import (
 	"github.com/hyperledger/fabric-sdk-go/pkg/common/providers/fab"
 	"github.com/hyperledger/fabric/common/util"
 	"github.com/meshplus/bitxhub-model/pb"
+	"github.com/meshplus/bitxid"
 	"github.com/meshplus/pier/pkg/plugins"
 )
 
@@ -56,14 +56,14 @@ type ContractMeta struct {
 }
 
 type Client struct {
-	meta     *ContractMeta
-	consumer *Consumer
-	eventC   chan *pb.IBTP
-	pierId   string
-	name     string
-	outMeta  map[string]uint64
-	ticker   *time.Ticker
-	done     chan bool
+	meta       *ContractMeta
+	consumer   *Consumer
+	eventC     chan *pb.IBTP
+	appchainID string
+	name       string
+	outMeta    map[string]uint64
+	ticker     *time.Ticker
+	done       chan bool
 }
 
 type CallFunc struct {
@@ -71,7 +71,7 @@ type CallFunc struct {
 	Args [][]byte `json:"args"`
 }
 
-func (c *Client) Initialize(configPath, pierId string, extra []byte) error {
+func (c *Client) Initialize(configPath, appchainID string, extra []byte) error {
 	eventC := make(chan *pb.IBTP)
 	fabricConfig, err := UnmarshalConfig(configPath)
 	if err != nil {
@@ -94,7 +94,7 @@ func (c *Client) Initialize(configPath, pierId string, extra []byte) error {
 		m = make(map[string]uint64)
 	}
 
-	mgh, err := newFabricHandler(contractmeta.EventFilter, eventC, pierId)
+	mgh, err := newFabricHandler(contractmeta.EventFilter, eventC, appchainID)
 	if err != nil {
 		return err
 	}
@@ -108,7 +108,7 @@ func (c *Client) Initialize(configPath, pierId string, extra []byte) error {
 	c.consumer = csm
 	c.eventC = eventC
 	c.meta = contractmeta
-	c.pierId = pierId
+	c.appchainID = appchainID
 	c.name = fabricConfig.Name
 	c.outMeta = m
 	c.ticker = time.NewTicker(2 * time.Second)
@@ -161,11 +161,11 @@ func (c *Client) polling() {
 			}
 			for _, ev := range evs {
 				ev.Proof = proof
-				c.eventC <- ev.Convert2IBTP(c.pierId, pb.IBTP_INTERCHAIN)
+				c.eventC <- ev.Convert2IBTP(c.appchainID, pb.IBTP_INTERCHAIN)
 				if c.outMeta == nil {
 					c.outMeta = make(map[string]uint64)
 				}
-				c.outMeta[ev.DstChainID]++
+				c.outMeta[string(bitxid.DID(ev.DstContractDID).GetChainDID())]++
 			}
 		case <-c.done:
 			logger.Info("Stop long polling")
@@ -204,12 +204,12 @@ func (c *Client) getProof(response channel.Response) ([]byte, error) {
 		var err error
 		proof, err = handle(response)
 		if err != nil {
-			logger.Error("can't get proof", "err", err.Error())
+			logger.Error("Can't get proof", "error", err.Error())
 			return err
 		}
 		return nil
 	}, strategy.Wait(2*time.Second)); err != nil {
-		logger.Error("get proof retry failed", "err", err.Error())
+		logger.Error("Can't get proof", "error", err.Error())
 	}
 
 	return proof, nil
@@ -342,7 +342,7 @@ func (c *Client) InvokeInterchain(from string, index uint64, destAddr string, ca
 
 		return nil
 	}, strategy.Wait(2*time.Second)); err != nil {
-		logger.Error("Can't send rollback ibtp back to bitxhub", "err", err.Error())
+		logger.Error("Can't send rollback ibtp back to bitxhub", "error", err.Error())
 	}
 
 	if err != nil {
@@ -372,7 +372,11 @@ func (c *Client) GetOutMessage(to string, idx uint64) (*pb.IBTP, error) {
 		return nil, err
 	}
 
-	return c.unpackIBTP(&response, pb.IBTP_INTERCHAIN)
+	proof, err := c.getProof(response)
+	if err != nil {
+		return nil, err
+	}
+	return c.unpackIBTP(&response, pb.IBTP_INTERCHAIN, proof)
 }
 
 func (c *Client) GetInMessage(from string, index uint64) ([][]byte, error) {
@@ -489,13 +493,13 @@ func (c Client) InvokeIndexUpdate(from string, index uint64, category pb.IBTP_Ca
 	return &res, response, nil
 }
 
-func (c *Client) unpackIBTP(response *channel.Response, ibtpType pb.IBTP_Type) (*pb.IBTP, error) {
+func (c *Client) unpackIBTP(response *channel.Response, ibtpType pb.IBTP_Type, proof []byte) (*pb.IBTP, error) {
 	ret := &Event{}
 	if err := json.Unmarshal(response.Payload, ret); err != nil {
 		return nil, err
 	}
-
-	return ret.Convert2IBTP(c.pierId, ibtpType), nil
+	ret.Proof = proof
+	return ret.Convert2IBTP(c.appchainID, ibtpType), nil
 }
 
 func (c *Client) unpackMap(response channel.Response) (map[string]uint64, error) {
