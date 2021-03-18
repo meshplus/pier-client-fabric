@@ -11,9 +11,9 @@ import (
 )
 
 const (
-	channelID            = "mychannel"
-	brokerContractName   = "broker"
-	interchainInvokeFunc = "InterchainTransferInvoke"
+	channelID               = "mychannel"
+	brokerContractName      = "broker"
+	emitInterchainEventFunc = "EmitInterchainEvent"
 )
 
 type Transfer struct{}
@@ -121,9 +121,10 @@ func (t *Transfer) transfer(stub shim.ChaincodeStubInterface, args []string) pb.
 			return shim.Error(err.Error())
 		}
 
-		b := util.ToChaincodeArgs(interchainInvokeFunc, dest, address, sender, receiver, amountArg)
+		args := strings.Join([]string{sender, receiver, amountArg}, ",")
+		argsRb := strings.Join([]string{sender, amountArg}, ",")
+		b := util.ToChaincodeArgs(emitInterchainEventFunc, dest, address, "interchainCharge", args, "", "", "interchainRollback", argsRb)
 		response := stub.InvokeChaincode(brokerContractName, b, channelID)
-
 		if response.Status != shim.OK {
 			return shim.Error(fmt.Errorf("invoke broker chaincode %s", response.Message).Error())
 		}

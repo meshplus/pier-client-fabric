@@ -18,6 +18,9 @@ type Event struct {
 	Func          string `json:"func"`
 	Args          string `json:"args"`
 	Callback      string `json:"callback"`
+	Argscb        string `json:"argscb"`
+	Rollback      string `json:"rollback"`
+	Argsrb        string `json:"argsrb"`
 	Proof         []byte `json:"proof"`
 	Extra         []byte `json:"extra"`
 }
@@ -55,18 +58,25 @@ func (ev *Event) Convert2IBTP(from string, ibtpType pb.IBTP_Type) *pb.IBTP {
 	}
 }
 
-func (ev *Event) encryptPayload() ([]byte, error) {
-	args := make([][]byte, 0)
-	as := strings.Split(ev.Args, ",")
+func handleArgs(args string) [][]byte {
+	argsBytes := make([][]byte, 0)
+	as := strings.Split(args, ",")
 	for _, a := range as {
-		args = append(args, []byte(a))
+		argsBytes = append(argsBytes, []byte(a))
 	}
+	return argsBytes
+}
+
+func (ev *Event) encryptPayload() ([]byte, error) {
 	content := &pb.Content{
 		SrcContractId: ev.SrcContractID,
 		DstContractId: ev.DstContractID,
 		Func:          ev.Func,
-		Args:          args,
+		Args:          handleArgs(ev.Args),
 		Callback:      ev.Callback,
+		ArgsCb:        handleArgs(ev.Argscb),
+		Rollback:      ev.Rollback,
+		ArgsRb:        handleArgs(ev.Argsrb),
 	}
 	data, err := content.Marshal()
 	if err != nil {
