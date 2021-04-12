@@ -27,6 +27,6 @@ jobs:
       - name: Release Binary
         uses: softprops/action-gh-release@v1
         with:
-          files: build/fabric-client-*
+          files: build/fabric-client-v*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,6 +1,7 @@
 SHELL := /bin/bash
 CURRENT_PATH = $(shell pwd)
 DISTRO = $(shell uname)
+CURRENT_TAG =$(shell git describe --abbrev=0 --tags)
 
 GO  = GO111MODULE=on go
 
@@ -32,7 +33,7 @@ fabric1.4-linux:
 
 release-binary:
 	mkdir -p build
-	$(GO) build -o build/fabric-client-${DISTRO} ./*.go
+	$(GO) build -o build/fabric-client-${CURRENT_TAG}-${DISTRO} ./*.go
 
 ## make linter: Run golanci-lint
 linter:
