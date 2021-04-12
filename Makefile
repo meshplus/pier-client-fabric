@@ -1,5 +1,6 @@
 SHELL := /bin/bash
 CURRENT_PATH = $(shell pwd)
+DISTRO = $(shell uname)
 
 GO  = GO111MODULE=on go
 
@@ -28,6 +29,10 @@ docker:
 
 fabric1.4-linux:
 	cd scripts && sh cross_compile.sh linux-amd64 ${CURRENT_PATH}
+
+release-binary:
+	mkdir -p build
+	$(GO) build -o build/fabric-client-${DISTRO} ./*.go
 
 ## make linter: Run golanci-lint
 linter:
