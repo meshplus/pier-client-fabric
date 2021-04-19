@@ -6,32 +6,32 @@ import (
 
 	"github.com/cloudflare/cfssl/log"
 	"github.com/meshplus/bitxhub-model/pb"
+	"github.com/meshplus/bitxid"
 )
 
 type Event struct {
-	Index         uint64 `json:"index"`
-	DstChainID    string `json:"dst_chain_id"`
-	SrcContractID string `json:"src_contract_id"`
-	DstContractID string `json:"dst_contract_id"`
-	Func          string `json:"func"`
-	Args          string `json:"args"`
-	Callback      string `json:"callback"`
-	Argscb        string `json:"argscb"`
-	Rollback      string `json:"rollback"`
-	Argsrb        string `json:"argsrb"`
-	Proof         []byte `json:"proof"`
-	Extra         []byte `json:"extra"`
+	Index          uint64 `json:"index"`
+	DstContractDID string `json:"dst_contract_did"`
+	SrcContractID  string `json:"src_contract_id"`
+	Func           string `json:"func"`
+	Args           string `json:"args"`
+	Callback       string `json:"callback"`
+	Argscb         string `json:"argscb"`
+	Rollback       string `json:"rollback"`
+	Argsrb         string `json:"argsrb"`
+	Proof          []byte `json:"proof"`
+	Extra          []byte `json:"extra"`
 }
 
-func (ev *Event) Convert2IBTP(from string, ibtpType pb.IBTP_Type) *pb.IBTP {
+func (ev *Event) Convert2IBTP(srcMethod string, ibtpType pb.IBTP_Type) *pb.IBTP {
 	pd, err := ev.encryptPayload()
 	if err != nil {
 		log.Fatalf("Get ibtp payload :%s", err)
 	}
 
 	return &pb.IBTP{
-		From:      from,
-		To:        ev.DstChainID,
+		From:      srcMethod,
+		To:        string(bitxid.DID(ev.DstContractDID).GetChainDID()),
 		Index:     ev.Index,
 		Type:      ibtpType,
 		Timestamp: time.Now().UnixNano(),
@@ -53,7 +53,7 @@ func handleArgs(args string) [][]byte {
 func (ev *Event) encryptPayload() ([]byte, error) {
 	content := &pb.Content{
 		SrcContractId: ev.SrcContractID,
-		DstContractId: ev.DstContractID,
+		DstContractId: bitxid.DID(ev.DstContractDID).GetAddress(),
 		Func:          ev.Func,
 		Args:          handleArgs(ev.Args),
 		Callback:      ev.Callback,

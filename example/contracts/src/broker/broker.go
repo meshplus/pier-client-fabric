@@ -26,16 +26,15 @@ const (
 type Broker struct{}
 
 type Event struct {
-	Index         uint64 `json:"index"`
-	DstChainID    string `json:"dst_chain_id"`
-	SrcContractID string `json:"src_contract_id"`
-	DstContractID string `json:"dst_contract_id"`
-	Func          string `json:"func"`
-	Args          string `json:"args"`
-	Callback      string `json:"callback"`
-	Argscb        string `json:"argscb"`
-	Rollback      string `json:"rollback"`
-	Argsrb        string `json:"argsrb"`
+	Index          uint64 `json:"index"`
+	DstContractDID string `json:"dst_contract_did"`
+	SrcContractID  string `json:"src_contract_id"`
+	Func           string `json:"func"`
+	Args           string `json:"args"`
+	Callback       string `json:"callback"`
+	Argscb         string `json:"argscb"`
+	Rollback       string `json:"rollback"`
+	Argsrb         string `json:"argsrb"`
 }
 
 type CallFunc struct {
@@ -129,8 +128,7 @@ func (broker *Broker) initialize(stub shim.ChaincodeStubInterface) pb.Response {
 }
 
 // EmitInterchainEvent
-// address to,
-// address tid,
+// string destContractDID,
 // string func,
 // string args,
 // string callback;
@@ -138,18 +136,22 @@ func (broker *Broker) initialize(stub shim.ChaincodeStubInterface) pb.Response {
 // string rollback;
 // string argsRb;
 func (broker *Broker) EmitInterchainEvent(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	if len(args) != 8 {
-		return shim.Error("incorrect number of arguments, expecting 8")
+	if len(args) != 7 {
+		return shim.Error("incorrect number of arguments, expecting 7")
 	}
 
-	destChainID := args[0]
+	destContractDID := args[0]
+	destChainMethod := parseMethod(destContractDID)
+	if destChainMethod == "" {
+		return ErrInvalidDID(destContractDID)
+	}
 	outMeta, err := broker.getMap(stub, outterMeta)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
 
-	if _, ok := outMeta[destChainID]; !ok {
-		outMeta[destChainID] = 0
+	if _, ok := outMeta[destChainMethod]; !ok {
+		outMeta[destChainMethod] = 0
 	}
 
 	cid, err := getChaincodeID(stub)
@@ -158,19 +160,18 @@ func (broker *Broker) EmitInterchainEvent(stub shim.ChaincodeStubInterface, args
 	}
 
 	tx := &Event{
-		Index:         outMeta[destChainID] + 1,
-		DstChainID:    destChainID,
-		SrcContractID: cid,
-		DstContractID: args[1],
-		Func:          args[2],
-		Args:          args[3],
-		Callback:      args[4],
-		Argscb:        args[5],
-		Rollback:      args[6],
-		Argsrb:        args[7],
+		Index:          outMeta[destChainMethod] + 1,
+		DstContractDID: destContractDID,
+		SrcContractID:  cid,
+		Func:           args[1],
+		Args:           args[2],
+		Callback:       args[3],
+		Argscb:         args[4],
+		Rollback:       args[5],
+		Argsrb:         args[6],
 	}
 
-	outMeta[tx.DstChainID]++
+	outMeta[destChainMethod]++
 
 	txValue, err := json.Marshal(tx)
 	if err != nil {
@@ -178,7 +179,7 @@ func (broker *Broker) EmitInterchainEvent(stub shim.ChaincodeStubInterface, args
 	}
 
 	// persist out message
-	key := broker.outMsgKey(tx.DstChainID, strconv.FormatUint(tx.Index, 10))
+	key := broker.outMsgKey(destChainMethod, strconv.FormatUint(tx.Index, 10))
 	if err := stub.PutState(key, txValue); err != nil {
 		return shim.Error(fmt.Errorf("persist event: %w", err).Error())
 	}
@@ -258,15 +259,15 @@ func (broker *Broker) pollingEvent(stub shim.ChaincodeStubInterface, args []stri
 		return shim.Error(err.Error())
 	}
 	events := make([]*Event, 0)
-	for addr, idx := range outMeta {
-		startPos, ok := m[addr]
+	for method, idx := range outMeta {
+		startPos, ok := m[method]
 		if !ok {
 			startPos = 0
 		}
 		for i := startPos + 1; i <= idx; i++ {
-			eb, err := stub.GetState(broker.outMsgKey(addr, strconv.FormatUint(i, 10)))
+			eb, err := stub.GetState(broker.outMsgKey(method, strconv.FormatUint(i, 10)))
 			if err != nil {
-				fmt.Printf("get out event by key %s fail", broker.outMsgKey(addr, strconv.FormatUint(i, 10)))
+				fmt.Printf("get out event by key %s fail", broker.outMsgKey(method, strconv.FormatUint(i, 10)))
 				continue
 			}
 			e := &Event{}
@@ -284,17 +285,17 @@ func (broker *Broker) pollingEvent(stub shim.ChaincodeStubInterface, args []stri
 	return shim.Success(ret)
 }
 
-func (broker *Broker) updateIndex(stub shim.ChaincodeStubInterface, sourceChainID, sequenceNum string, isReq bool) error {
+func (broker *Broker) updateIndex(stub shim.ChaincodeStubInterface, sourceChainMethod, sequenceNum string, isReq bool) error {
 	if isReq {
-		if err := broker.checkIndex(stub, sourceChainID, sequenceNum, innerMeta); err != nil {
+		if err := broker.checkIndex(stub, sourceChainMethod, sequenceNum, innerMeta); err != nil {
 			return err
 		}
 
-		if err := broker.markInCounter(stub, sourceChainID); err != nil {
+		if err := broker.markInCounter(stub, sourceChainMethod); err != nil {
 			return err
 		}
 	} else {
-		if err := broker.checkIndex(stub, sourceChainID, sequenceNum, callbackMeta); err != nil {
+		if err := broker.checkIndex(stub, sourceChainMethod, sequenceNum, callbackMeta); err != nil {
 			return err
 		}
 
@@ -302,7 +303,7 @@ func (broker *Broker) updateIndex(stub shim.ChaincodeStubInterface, sourceChainI
 		if err != nil {
 			return err
 		}
-		if err := broker.markCallbackCounter(stub, sourceChainID, idx); err != nil {
+		if err := broker.markCallbackCounter(stub, sourceChainMethod, idx); err != nil {
 			return err
 		}
 	}
@@ -315,14 +316,14 @@ func (broker *Broker) invokeIndexUpdate(stub shim.ChaincodeStubInterface, args [
 		return errorResponse("incorrect number of arguments, expecting 3")
 	}
 
-	sourceChainID := args[0]
+	sourceChainMethod := args[0]
 	sequenceNum := args[1]
 	isReq, err := strconv.ParseBool(args[2])
 	if err != nil {
 		return errorResponse(fmt.Sprintf("cannot parse %s to bool", args[3]))
 	}
 
-	if err := broker.updateIndex(stub, sourceChainID, sequenceNum, isReq); err != nil {
+	if err := broker.updateIndex(stub, sourceChainMethod, sequenceNum, isReq); err != nil {
 		return errorResponse(err.Error())
 	}
 
@@ -334,7 +335,7 @@ func (broker *Broker) invokeInterchain(stub shim.ChaincodeStubInterface, args []
 		return errorResponse("incorrect number of arguments, expecting 5")
 	}
 
-	sourceChainID := args[0]
+	srcChainMethod := args[0]
 	sequenceNum := args[1]
 	targetCID := args[2]
 	isReq, err := strconv.ParseBool(args[3])
@@ -342,7 +343,7 @@ func (broker *Broker) invokeInterchain(stub shim.ChaincodeStubInterface, args []
 		return errorResponse(fmt.Sprintf("cannot parse %s to bool", args[3]))
 	}
 
-	if err := broker.updateIndex(stub, sourceChainID, sequenceNum, isReq); err != nil {
+	if err := broker.updateIndex(stub, srcChainMethod, sequenceNum, isReq); err != nil {
 		return errorResponse(err.Error())
 	}
 
@@ -364,7 +365,7 @@ func (broker *Broker) invokeInterchain(stub shim.ChaincodeStubInterface, args []
 		return errorResponse(fmt.Sprintf("invoke chaincode '%s' function %s err: %s", splitedCID[1], callFunc.Func, response.Message))
 	}
 
-	inKey := broker.inMsgKey(sourceChainID, sequenceNum)
+	inKey := broker.inMsgKey(srcChainMethod, sequenceNum)
 	value, err := json.Marshal(response)
 	if err != nil {
 		return errorResponse(err.Error())

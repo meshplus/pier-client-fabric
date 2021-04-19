@@ -19,9 +19,12 @@ func (broker *Broker) getOutMessage(stub shim.ChaincodeStubInterface, args []str
 	if len(args) < 2 {
 		return shim.Error("incorrect number of arguments, expecting 2")
 	}
-	destChainID := args[0]
+	destChainMethod := args[0]
 	sequenceNum := args[1]
-	key := broker.outMsgKey(destChainID, sequenceNum)
+	if !broker.validDID(destChainMethod) {
+		return ErrInvalidDID(destChainMethod)
+	}
+	key := broker.outMsgKey(destChainMethod, sequenceNum)
 	v, err := stub.GetState(key)
 	if err != nil {
 		return shim.Error(err.Error())
@@ -42,9 +45,12 @@ func (broker *Broker) getInMessage(stub shim.ChaincodeStubInterface, args []stri
 	if len(args) < 2 {
 		return shim.Error("incorrect number of arguments, expecting 2")
 	}
-	sourceChainID := args[0]
+	sourceChainMethod := args[0]
 	sequenceNum := args[1]
-	key := broker.inMsgKey(sourceChainID, sequenceNum)
+	if !broker.validDID(sourceChainMethod) {
+		return ErrInvalidDID(sourceChainMethod)
+	}
+	key := broker.inMsgKey(sourceChainMethod, sequenceNum)
 	v, err := stub.GetState(key)
 	if err != nil {
 		return shim.Error(err.Error())
