@@ -178,14 +178,9 @@ func (broker *Broker) getList(stub shim.ChaincodeStubInterface) pb.Response {
 
 func (broker *Broker) checkAdmin(stub shim.ChaincodeStubInterface, function string) bool {
 	checks := map[string]struct{}{
-		"audit":                         {},
-		"interchainCharge":              {},
-		"interchainConfirm":             {},
-		"interchainGet":                 {},
-		"interchainSet":                 {},
-		"interchainAssetExchangeInit":   {},
-		"interchainAssetExchangeRedeem": {},
-		"interchainAssetExchangeRefund": {},
+		"audit":             {},
+		"invokeInterchain":  {},
+		"invokeIndexUpdate": {},
 	}
 
 	if _, ok := checks[function]; !ok {
@@ -197,12 +192,7 @@ func (broker *Broker) checkAdmin(stub shim.ChaincodeStubInterface, function stri
 
 func (broker *Broker) checkWhitelist(stub shim.ChaincodeStubInterface, function string) bool {
 	checks := map[string]struct{}{
-		"InterchainTransferInvoke":            {},
-		"InterchainDataSwapInvoke":            {},
-		"InterchainInvoke":                    {},
-		"InterchainAssetExchangeInitInvoke":   {},
-		"InterchainAssetExchangeRedeemInvoke": {},
-		"InterchainAssetExchangeRefundInvoke": {},
+		"EmitInterchainEvent": {},
 	}
 
 	if _, ok := checks[function]; !ok {
