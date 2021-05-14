@@ -455,6 +455,56 @@ func (c *Client) CommitCallback(ibtp *pb.IBTP) error {
 	return nil
 }
 
+// @ibtp is the original ibtp merged from this appchain
+func (c *Client) RollbackIBTP(ibtp *pb.IBTP, isSrcChain bool) (*pb.RollbackIBTPResponse, error) {
+	ret := &pb.RollbackIBTPResponse{}
+	pd := &pb.Payload{}
+	if err := pd.Unmarshal(ibtp.Payload); err != nil {
+		return nil, fmt.Errorf("ibtp payload unmarshal: %w", err)
+	}
+	content := &pb.Content{}
+	if err := content.Unmarshal(pd.Content); err != nil {
+		return ret, fmt.Errorf("ibtp content unmarshal: %w", err)
+	}
+
+	// only support rollback for interchainCharge
+	if content.Func != "interchainCharge" {
+		return nil, nil
+	}
+
+	callFunc := CallFunc{
+		Func: content.Rollback,
+		Args: content.ArgsRb,
+	}
+	bizData, err := json.Marshal(callFunc)
+	if err != nil {
+		return ret, err
+	}
+
+	// pb.IBTP_RESPONSE indicates it is to update callback counter
+	_, resp, err := c.InvokeInterchain(ibtp.To, ibtp.Index, content.SrcContractId, pb.IBTP_RESPONSE, bizData)
+	if err != nil {
+		return nil, fmt.Errorf("invoke interchain for ibtp %s to call %s: %w", ibtp.ID(), content.Rollback, err)
+	}
+
+	ret.Status = resp.OK
+	ret.Message = resp.Message
+
+	return ret, nil
+}
+
+func (c *Client) IncreaseInMeta(original *pb.IBTP) (*pb.IBTP, error) {
+	ibtp, err := c.generateCallback(original, nil, nil, false)
+	if err != nil {
+		return nil, err
+	}
+	_, _, err = c.InvokeIndexUpdate(original.From, original.Index, original.Category())
+	if err != nil {
+		logger.Error("update in meta", "ibtp_id", original.ID(), "error", err.Error())
+	}
+	return ibtp, nil
+}
+
 func (c *Client) GetReceipt(ibtp *pb.IBTP) (*pb.IBTP, error) {
 	result, err := c.GetInMessage(ibtp.From, ibtp.Index)
 	if err != nil {
