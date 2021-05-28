@@ -12,6 +12,7 @@ require (
 	github.com/go-logfmt/logfmt v0.4.0 // indirect
 	github.com/golang/protobuf v1.4.0
 	github.com/google/certificate-transparency-go v1.1.0 // indirect
+	github.com/hashicorp/go-hclog v0.0.0-20180709165350-ff2cf002a8dd
 	github.com/hashicorp/go-plugin v1.3.0
 	github.com/hyperledger/fabric v2.0.1+incompatible
 	github.com/hyperledger/fabric-chaincode-go v0.0.0-20200511190512-bcfeb58dd83a
@@ -23,6 +24,7 @@ require (
 	github.com/meshplus/pier v1.7.1-0.20210521020418-8d397e8d7646
 	github.com/sirupsen/logrus v1.6.0
 	github.com/spf13/viper v1.7.0
+	github.com/stretchr/testify v1.7.0
 	sigs.k8s.io/yaml v1.2.0 // indirect
 )
 

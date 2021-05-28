@@ -8,11 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/go-hclog"
-
 	"github.com/Rican7/retry"
 	"github.com/Rican7/retry/strategy"
 	"github.com/golang/protobuf/proto"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
 	"github.com/hyperledger/fabric-chaincode-go/shim"
 	"github.com/hyperledger/fabric-protos-go/common"
@@ -490,13 +489,18 @@ func (c *Client) RollbackIBTP(ibtp *pb.IBTP, isSrcChain bool) (*pb.RollbackIBTPR
 }
 
 func (c *Client) IncreaseInMeta(original *pb.IBTP) (*pb.IBTP, error) {
-	ibtp, err := c.generateCallback(original, nil, nil, false)
+	response, _, err := c.InvokeIndexUpdate(original.From, original.Index, original.Category())
+	if err != nil {
+		logger.Error("update in meta", "ibtp_id", original.ID(), "error", err.Error())
+		return nil, err
+	}
+	proof, err := c.getProof(*response)
 	if err != nil {
 		return nil, err
 	}
-	_, _, err = c.InvokeIndexUpdate(original.From, original.Index, original.Category())
+	ibtp, err := c.generateCallback(original, nil, proof, false)
 	if err != nil {
-		logger.Error("update in meta", "ibtp_id", original.ID(), "error", err.Error())
+		return nil, err
 	}
 	return ibtp, nil
 }
@@ -544,6 +548,11 @@ func (c *Client) unpackIBTP(response *channel.Response, ibtpType pb.IBTP_Type) (
 	if err := json.Unmarshal(response.Payload, ret); err != nil {
 		return nil, err
 	}
+	proof, err := c.getProof(*response)
+	if err != nil {
+		return nil, err
+	}
+	ret.Proof = proof
 
 	return ret.Convert2IBTP(c.pierId, ibtpType), nil
 }
