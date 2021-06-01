@@ -8,11 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/go-hclog"
-
 	"github.com/Rican7/retry"
 	"github.com/Rican7/retry/strategy"
 	"github.com/golang/protobuf/proto"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
 	"github.com/hyperledger/fabric-chaincode-go/shim"
 	"github.com/hyperledger/fabric-protos-go/common"
@@ -451,6 +450,61 @@ func (c *Client) CommitCallback(ibtp *pb.IBTP) error {
 	return nil
 }
 
+// @ibtp is the original ibtp merged from this appchain
+func (c *Client) RollbackIBTP(ibtp *pb.IBTP, isSrcChain bool) (*pb.RollbackIBTPResponse, error) {
+	ret := &pb.RollbackIBTPResponse{}
+	pd := &pb.Payload{}
+	if err := pd.Unmarshal(ibtp.Payload); err != nil {
+		return nil, fmt.Errorf("ibtp payload unmarshal: %w", err)
+	}
+	content := &pb.Content{}
+	if err := content.Unmarshal(pd.Content); err != nil {
+		return ret, fmt.Errorf("ibtp content unmarshal: %w", err)
+	}
+
+	// only support rollback for interchainCharge
+	if content.Func != "interchainCharge" {
+		return nil, nil
+	}
+
+	callFunc := CallFunc{
+		Func: content.Rollback,
+		Args: content.ArgsRb,
+	}
+	bizData, err := json.Marshal(callFunc)
+	if err != nil {
+		return ret, err
+	}
+
+	// pb.IBTP_RESPONSE indicates it is to update callback counter
+	_, resp, err := c.InvokeInterchain(ibtp.To, ibtp.Index, content.SrcContractId, pb.IBTP_RESPONSE, bizData)
+	if err != nil {
+		return nil, fmt.Errorf("invoke interchain for ibtp %s to call %s: %w", ibtp.ID(), content.Rollback, err)
+	}
+
+	ret.Status = resp.OK
+	ret.Message = resp.Message
+
+	return ret, nil
+}
+
+func (c *Client) IncreaseInMeta(original *pb.IBTP) (*pb.IBTP, error) {
+	response, _, err := c.InvokeIndexUpdate(original.From, original.Index, original.Category())
+	if err != nil {
+		logger.Error("update in meta", "ibtp_id", original.ID(), "error", err.Error())
+		return nil, err
+	}
+	proof, err := c.getProof(*response)
+	if err != nil {
+		return nil, err
+	}
+	ibtp, err := c.generateCallback(original, nil, proof, false)
+	if err != nil {
+		return nil, err
+	}
+	return ibtp, nil
+}
+
 func (c *Client) GetReceipt(ibtp *pb.IBTP) (*pb.IBTP, error) {
 	result, err := c.GetInMessage(ibtp.From, ibtp.Index)
 	if err != nil {
@@ -494,6 +548,11 @@ func (c *Client) unpackIBTP(response *channel.Response, ibtpType pb.IBTP_Type) (
 	if err := json.Unmarshal(response.Payload, ret); err != nil {
 		return nil, err
 	}
+	proof, err := c.getProof(*response)
+	if err != nil {
+		return nil, err
+	}
+	ret.Proof = proof
 
 	return ret.Convert2IBTP(c.pierId, ibtpType), nil
 }
