@@ -362,6 +362,7 @@ func (c *Client) InvokeInterchain(from string, index uint64, destAddr string, ca
 }
 
 func (c *Client) CheckHash(hash string) (*pb.CheckHashResponse, error) {
+
 	request := channel.Request{
 		ChaincodeID: c.meta.DataSwapper,
 		Fcn:         GetData,

@@ -3,13 +3,14 @@ module github.com/meshplus/pier-client-fabric
 go 1.13
 
 require (
+	github.com/OneOfOne/xxhash v1.2.5 // indirect
 	github.com/Rican7/retry v0.1.0
 	github.com/VividCortex/gohistogram v1.0.0 // indirect
 	github.com/cloudflare/cfssl v0.0.0-20190409034051-768cd563887f
 	github.com/elastic/gosigar v0.8.1-0.20180330100440-37f05ff46ffa // indirect
 	github.com/ethereum/go-ethereum v1.9.18 // indirect
 	github.com/go-logfmt/logfmt v0.4.0 // indirect
-	github.com/golang/protobuf v1.4.3
+	github.com/golang/protobuf v1.4.0
 	github.com/google/certificate-transparency-go v1.1.0 // indirect
 	github.com/hashicorp/go-hclog v0.0.0-20180709165350-ff2cf002a8dd
 	github.com/hashicorp/go-plugin v1.3.0
@@ -21,10 +22,9 @@ require (
 	github.com/meshplus/bitxhub v1.0.0-rc2 // indirect
 	github.com/meshplus/bitxhub-model v1.1.2-0.20210630034932-474333444ed0
 	github.com/meshplus/pier v1.7.1-0.20210618025346-69577a021767
-	github.com/sirupsen/logrus v1.6.0 // indirect
+	github.com/sirupsen/logrus v1.6.0
 	github.com/spf13/viper v1.7.0
 	github.com/stretchr/testify v1.7.0
-	google.golang.org/grpc/examples v0.0.0-20210617235352-74fe073e9acc // indirect
 	sigs.k8s.io/yaml v1.2.0 // indirect
 )
 
