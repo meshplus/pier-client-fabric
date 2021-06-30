@@ -17,6 +17,7 @@ type Fabric struct {
 	EventFilter string `mapstructure:"event_filter" toml:"event_filter" json:"event_filter"`
 	Username    string `toml:"username" json:"username"`
 	CCID        string `toml:"ccid" json:"ccid"`
+	DataSwapper string `mapstructure:"data_swapper" json:"data_swapper"`
 	ChannelId   string `mapstructure:"channel_id" toml:"channel_id" json:"channel_id"`
 	Org         string `toml:"org" json:"org"`
 }

@@ -43,13 +43,16 @@ const (
 	PollingEventMethod      = "pollingEvent"
 	InvokeInterchainMethod  = "invokeInterchain"
 	InvokeIndexUpdateMethod = "invokeIndexUpdate"
-	FabricType              = "fabric"
+
+	GetData    = "getData"
+	FabricType = "fabric"
 )
 
 type ContractMeta struct {
 	EventFilter string `json:"event_filter"`
 	Username    string `json:"username"`
 	CCID        string `json:"ccid"`
+	DataSwapper string `json:"data_swapper"`
 	ChannelID   string `json:"channel_id"`
 	ORG         string `json:"org"`
 }
@@ -81,6 +84,7 @@ func (c *Client) Initialize(configPath, pierId string, extra []byte) error {
 		EventFilter: fabricConfig.EventFilter,
 		Username:    fabricConfig.Username,
 		CCID:        fabricConfig.CCID,
+		DataSwapper: fabricConfig.DataSwapper,
 		ChannelID:   fabricConfig.ChannelId,
 		ORG:         fabricConfig.Org,
 	}
@@ -355,6 +359,22 @@ func (c *Client) InvokeInterchain(from string, index uint64, destAddr string, ca
 	}
 
 	return &res, response, nil
+}
+
+func (c *Client) CheckHash(hash string) (*pb.CheckHashResponse, error) {
+	request := channel.Request{
+		ChaincodeID: c.meta.DataSwapper,
+		Fcn:         GetData,
+		Args:        [][]byte{[]byte(hash)},
+	}
+	res, err := c.consumer.ChannelClient.Execute(request)
+	if err != nil {
+		return &pb.CheckHashResponse{Res: false}, err
+	}
+	if res.Payload == nil || len(res.Payload) == 0 {
+		return &pb.CheckHashResponse{Res: false}, err
+	}
+	return &pb.CheckHashResponse{Res: true}, nil
 }
 
 func (c *Client) GetOutMessage(to string, idx uint64) (*pb.IBTP, error) {

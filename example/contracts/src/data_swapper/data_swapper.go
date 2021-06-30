@@ -13,6 +13,7 @@ const (
 	channelID               = "mychannel"
 	brokerContractName      = "broker"
 	emitInterchainEventFunc = "EmitInterchainEvent"
+	emitLogExists           = "LogExists"
 )
 
 type DataSwapper struct{}
@@ -36,6 +37,10 @@ func (s *DataSwapper) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		return s.get(stub, args)
 	case "set":
 		return s.set(stub, args)
+	case "getData":
+		return s.getData(stub, args)
+	case "setData":
+		return s.setData(stub, args)
 	default:
 		return shim.Error("invalid function: " + function + ", args: " + strings.Join(args, ","))
 	}
@@ -48,6 +53,22 @@ func (s *DataSwapper) register(stub shim.ChaincodeStubInterface) pb.Response {
 		return shim.Error(fmt.Sprintf("invoke chaincode '%s' err: %s", brokerContractName, response.Message))
 	}
 	return response
+}
+
+// get is business function which will invoke the to,tid,id
+func (s *DataSwapper) getData(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	// args[0]: key
+	value, err := stub.GetState(args[0])
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+
+	if value != nil {
+		if err := stub.SetEvent(emitLogExists, value); err != nil {
+			return shim.Error(err.Error())
+		}
+	}
+	return shim.Success(value)
 }
 
 // get is business function which will invoke the to,tid,id
@@ -77,8 +98,21 @@ func (s *DataSwapper) get(stub shim.ChaincodeStubInterface, args []string) pb.Re
 	}
 }
 
-// get is business function which will invoke the to,tid,id
 func (s *DataSwapper) set(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	// args[0]: destination appchain id
+	// args[1]: destination contract address
+	// args[2]: key
+	b := util.ToChaincodeArgs(emitInterchainEventFunc, args[0], args[1], "interchainSet, , ", args[2], "", "")
+	response := stub.InvokeChaincode(brokerContractName, b, channelID)
+	if response.Status != shim.OK {
+		return shim.Error(fmt.Errorf("invoke broker chaincode %s error: %s", brokerContractName, response.Message).Error())
+	}
+
+	return shim.Success(nil)
+}
+
+// get is business function which will invoke the to,tid,id
+func (s *DataSwapper) setData(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	if len(args) != 2 {
 		return shim.Error("incorrect number of arguments")
 	}
@@ -93,7 +127,7 @@ func (s *DataSwapper) set(stub shim.ChaincodeStubInterface, args []string) pb.Re
 
 // interchainSet is the callback function getting data by interchain
 func (s *DataSwapper) interchainSet(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	return s.set(stub, args)
+	return s.setData(stub, args)
 }
 
 // interchainGet gets data by interchain
