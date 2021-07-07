@@ -222,6 +222,9 @@ func (broker *Broker) register(stub shim.ChaincodeStubInterface) pb.Response {
 
 // 通过chaincode自带的CID库可以验证调用者的相关信息
 func (broker *Broker) audit(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	if len(args) != 3 {
+		return errorResponse("incorrect number of arguments, expecting 3")
+	}
 	channel := args[0]
 	chaincodeName := args[1]
 	status := args[2]
