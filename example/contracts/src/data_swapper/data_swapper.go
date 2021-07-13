@@ -102,7 +102,11 @@ func (s *DataSwapper) set(stub shim.ChaincodeStubInterface, args []string) pb.Re
 	// args[0]: destination appchain id
 	// args[1]: destination contract address
 	// args[2]: key
-	b := util.ToChaincodeArgs(emitInterchainEventFunc, args[0], args[1], "interchainSet, , ", args[2], "", "")
+	// args[3]: value
+	if len(args) != 4 {
+		return shim.Error("incorrect number of arguments")
+	}
+	b := util.ToChaincodeArgs(emitInterchainEventFunc, args[0], args[1], "interchainSet", args[2]+","+args[3], "", "", "", "")
 	response := stub.InvokeChaincode(brokerContractName, b, channelID)
 	if response.Status != shim.OK {
 		return shim.Error(fmt.Errorf("invoke broker chaincode %s error: %s", brokerContractName, response.Message).Error())
