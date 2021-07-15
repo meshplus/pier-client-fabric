@@ -362,7 +362,6 @@ func (c *Client) InvokeInterchain(from string, index uint64, destAddr string, ca
 }
 
 func (c *Client) CheckHash(hash string) (*pb.CheckHashResponse, error) {
-
 	request := channel.Request{
 		ChaincodeID: c.meta.DataSwapper,
 		Fcn:         GetData,
@@ -372,7 +371,7 @@ func (c *Client) CheckHash(hash string) (*pb.CheckHashResponse, error) {
 	if err != nil {
 		return &pb.CheckHashResponse{Res: false}, err
 	}
-	if res.Payload == nil || len(res.Payload) == 0 {
+	if len(res.Payload) == 0 {
 		return &pb.CheckHashResponse{Res: false}, err
 	}
 	return &pb.CheckHashResponse{Res: true}, nil
@@ -485,7 +484,7 @@ func (c *Client) RollbackIBTP(ibtp *pb.IBTP, isSrcChain bool) (*pb.RollbackIBTPR
 
 	// only support rollback for interchainCharge
 	if content.Func != "interchainCharge" {
-		return nil, nil
+		return &pb.RollbackIBTPResponse{}, nil
 	}
 
 	callFunc := CallFunc{
