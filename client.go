@@ -35,15 +35,17 @@ var (
 var _ plugins.Client = (*Client)(nil)
 
 const (
-	GetInnerMetaMethod      = "getInnerMeta"    // get last index of each source chain executing tx
-	GetOutMetaMethod        = "getOuterMeta"    // get last index of each receiving chain crosschain event
-	GetCallbackMetaMethod   = "getCallbackMeta" // get last index of each receiving chain callback tx
-	GetInMessageMethod      = "getInMessage"
-	GetOutMessageMethod     = "getOutMessage"
-	PollingEventMethod      = "pollingEvent"
-	InvokeInterchainMethod  = "invokeInterchain"
-	InvokeIndexUpdateMethod = "invokeIndexUpdate"
-	FabricType              = "fabric"
+	GetInnerMetaMethod       = "getInnerMeta"       // get last index of each source chain executing tx
+	GetOutMetaMethod         = "getOuterMeta"       // get last index of each receiving chain crosschain event
+	GetCallbackMetaMethod    = "getCallbackMeta"    // get last index of each receiving chain callback tx
+	GetSrcRollbackMetaMethod = "getSrcRollbackMeta" // get last index of each receiving chain rollback tx
+	GetDstRollbackMetaMethod = "getDstRollbackMeta" // get last index of each source chain rollback tx
+	GetInMessageMethod       = "getInMessage"
+	GetOutMessageMethod      = "getOutMessage"
+	PollingEventMethod       = "pollingEvent"
+	InvokeInterchainMethod   = "invokeInterchain"
+	InvokeIndexUpdateMethod  = "invokeIndexUpdate"
+	FabricType               = "fabric"
 )
 
 type ContractMeta struct {
@@ -512,6 +514,36 @@ func (c *Client) RollbackIBTP(ibtp *pb.IBTP, isSrcChain bool) (*pb.RollbackIBTPR
 	}
 
 	return ret, nil
+}
+
+func (c *Client) GetSrcRollbackMeta() (map[string]uint64, error) {
+	request := channel.Request{
+		ChaincodeID: c.meta.CCID,
+		Fcn:         GetSrcRollbackMetaMethod,
+	}
+
+	var response channel.Response
+	response, err := c.consumer.ChannelClient.Execute(request)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.unpackMap(response)
+}
+
+func (c *Client) GetDstRollbackMeta() (map[string]uint64, error) {
+	request := channel.Request{
+		ChaincodeID: c.meta.CCID,
+		Fcn:         GetDstRollbackMetaMethod,
+	}
+
+	var response channel.Response
+	response, err := c.consumer.ChannelClient.Execute(request)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.unpackMap(response)
 }
 
 func (c *Client) IncreaseInMeta(original *pb.IBTP) (*pb.IBTP, error) {
