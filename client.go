@@ -256,7 +256,7 @@ func (c *Client) SubmitIBTP(ibtp *pb.IBTP) (*pb.SubmitIBTPResponse, error) {
 
 	if ibtp.Category() == pb.IBTP_RESPONSE && content.Func == "" {
 		logger.Info("InvokeIndexUpdate", "ibtp", ibtp.ID())
-		_, resp, err := c.InvokeIndexUpdate(ibtp.From, ibtp.Index, ibtp.Category())
+		_, resp, err := c.InvokeIndexUpdate(ibtp.From, ibtp.Index, uint64(ibtp.Category()))
 		if err != nil {
 			return nil, err
 		}
@@ -277,13 +277,13 @@ func (c *Client) SubmitIBTP(ibtp *pb.IBTP) (*pb.SubmitIBTPResponse, error) {
 		ret.Status = false
 		ret.Message = fmt.Sprintf("marshal ibtp %s func %s and args: %s", ibtp.ID(), callFunc.Func, err.Error())
 
-		res, _, err := c.InvokeIndexUpdate(ibtp.From, ibtp.Index, ibtp.Category())
+		res, _, err := c.InvokeIndexUpdate(ibtp.From, ibtp.Index, uint64(ibtp.Category()))
 		if err != nil {
 			return nil, err
 		}
 		chResp = res
 	} else {
-		res, resp, err := c.InvokeInterchain(ibtp.From, ibtp.Index, content.DstContractId, ibtp.Category(), bizData)
+		res, resp, err := c.InvokeInterchain(ibtp.From, ibtp.Index, content.DstContractId, uint64(ibtp.Category()), bizData)
 		if err != nil {
 			return nil, fmt.Errorf("invoke interchain for ibtp %s to call %s: %w", ibtp.ID(), content.Func, err)
 		}
@@ -314,12 +314,8 @@ func (c *Client) SubmitIBTP(ibtp *pb.IBTP) (*pb.SubmitIBTPResponse, error) {
 	return ret, nil
 }
 
-func (c *Client) InvokeInterchain(from string, index uint64, destAddr string, category pb.IBTP_Category, bizCallData []byte) (*channel.Response, *Response, error) {
-	req := "true"
-	if category == pb.IBTP_RESPONSE {
-		req = "false"
-	}
-	args := util.ToChaincodeArgs(from, strconv.FormatUint(index, 10), destAddr, req)
+func (c *Client) InvokeInterchain(from string, index uint64, destAddr string, category uint64, bizCallData []byte) (*channel.Response, *Response, error) {
+	args := util.ToChaincodeArgs(from, strconv.FormatUint(index, 10), destAddr, strconv.FormatUint(category, 10))
 	args = append(args, bizCallData)
 	request := channel.Request{
 		ChaincodeID: c.meta.CCID,
@@ -547,7 +543,7 @@ func (c *Client) GetDstRollbackMeta() (map[string]uint64, error) {
 }
 
 func (c *Client) IncreaseInMeta(original *pb.IBTP) (*pb.IBTP, error) {
-	response, _, err := c.InvokeIndexUpdate(original.From, original.Index, original.Category())
+	response, _, err := c.InvokeIndexUpdate(original.From, original.Index, uint64(original.Category()))
 	if err != nil {
 		logger.Error("update in meta", "ibtp_id", original.ID(), "error", err.Error())
 		return nil, err
@@ -576,12 +572,8 @@ func (c *Client) GetReceipt(ibtp *pb.IBTP) (*pb.IBTP, error) {
 	return c.generateCallback(ibtp, result[1:], nil, status)
 }
 
-func (c Client) InvokeIndexUpdate(from string, index uint64, category pb.IBTP_Category) (*channel.Response, *Response, error) {
-	req := "true"
-	if category == pb.IBTP_RESPONSE {
-		req = "false"
-	}
-	args := util.ToChaincodeArgs(from, strconv.FormatUint(index, 10), req)
+func (c Client) InvokeIndexUpdate(from string, index uint64, category uint64) (*channel.Response, *Response, error) {
+	args := util.ToChaincodeArgs(from, strconv.FormatUint(index, 10), strconv.FormatUint(category, 10))
 	request := channel.Request{
 		ChaincodeID: c.meta.CCID,
 		Fcn:         InvokeIndexUpdateMethod,
