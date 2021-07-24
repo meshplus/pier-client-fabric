@@ -245,9 +245,9 @@ func (c *Client) SubmitIBTP(ibtp *pb.IBTP) (*pb.SubmitIBTPResponse, error) {
 		return ret, fmt.Errorf("ibtp content unmarshal: %w", err)
 	}
 
-	if ibtp.Category() == pb.IBTP_UNKNOWN {
-		return nil, fmt.Errorf("invalid ibtp category")
-	}
+	//if ibtp.Category() == pb.IBTP_UNKNOWN {
+	//	return nil, fmt.Errorf("invalid ibtp category")
+	//}
 
 	logger.Info("submit ibtp", "id", ibtp.ID(), "contract", content.DstContractId, "func", content.Func)
 	for i, arg := range content.Args {
