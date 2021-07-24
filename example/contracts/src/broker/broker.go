@@ -16,6 +16,8 @@ const (
 	innerMeta           = "inner-meta"
 	outterMeta          = "outter-meta"
 	callbackMeta        = "callback-meta"
+	srcRollbackMeta     = "src-rollback-meta"
+	dstRollbackMeta     = "dst-rollback-meta"
 	whiteList           = "white-list"
 	adminList           = "admin-list"
 	passed              = "1"
@@ -112,6 +114,8 @@ func (broker *Broker) initialize(stub shim.ChaincodeStubInterface) pb.Response {
 	inCounter := make(map[string]uint64)
 	outCounter := make(map[string]uint64)
 	callbackCounter := make(map[string]uint64)
+	srcRollbackCounter := make(map[string]uint64)
+	dstRollbackCounter := make(map[string]uint64)
 
 	if err := broker.putMap(stub, innerMeta, inCounter); err != nil {
 		return shim.Error(err.Error())
@@ -122,6 +126,13 @@ func (broker *Broker) initialize(stub shim.ChaincodeStubInterface) pb.Response {
 	}
 
 	if err := broker.putMap(stub, callbackMeta, callbackCounter); err != nil {
+		return shim.Error(err.Error())
+	}
+
+	if err := broker.putMap(stub, dstRollbackMeta, dstRollbackCounter); err != nil {
+		return shim.Error(err.Error())
+	}
+	if err := broker.putMap(stub, srcRollbackMeta, srcRollbackCounter); err != nil {
 		return shim.Error(err.Error())
 	}
 
@@ -287,8 +298,9 @@ func (broker *Broker) pollingEvent(stub shim.ChaincodeStubInterface, args []stri
 	return shim.Success(ret)
 }
 
-func (broker *Broker) updateIndex(stub shim.ChaincodeStubInterface, sourceChainID, sequenceNum string, isReq bool) error {
-	if isReq {
+func (broker *Broker) updateIndex(stub shim.ChaincodeStubInterface, sourceChainID, sequenceNum string, reqType uint64) error {
+	// IBTP request
+	if reqType == 0 {
 		if err := broker.checkIndex(stub, sourceChainID, sequenceNum, innerMeta); err != nil {
 			return err
 		}
@@ -296,7 +308,7 @@ func (broker *Broker) updateIndex(stub shim.ChaincodeStubInterface, sourceChainI
 		if err := broker.markInCounter(stub, sourceChainID); err != nil {
 			return err
 		}
-	} else {
+	} else if reqType == 1 { // IBTP Response
 		if err := broker.checkIndex(stub, sourceChainID, sequenceNum, callbackMeta); err != nil {
 			return err
 		}
@@ -305,7 +317,40 @@ func (broker *Broker) updateIndex(stub shim.ChaincodeStubInterface, sourceChainI
 		if err != nil {
 			return err
 		}
+
 		if err := broker.markCallbackCounter(stub, sourceChainID, idx); err != nil {
+			return err
+		}
+	} else if reqType == 2 { // Rollback src chain
+		if err := broker.checkIndex(stub, sourceChainID, sequenceNum, callbackMeta); err != nil {
+			return err
+		}
+		if err := broker.checkRollbackIndex(stub, sourceChainID, sequenceNum, srcRollbackMeta); err != nil {
+			return err
+		}
+
+		idx, err := strconv.ParseUint(sequenceNum, 10, 64)
+		if err != nil {
+			return err
+		}
+
+		if err := broker.markCallbackCounter(stub, sourceChainID, idx); err != nil {
+			return err
+		}
+		if err := broker.markSrcRollbackCounter(stub, sourceChainID, idx); err != nil {
+			return err
+		}
+	} else { // Rollback dst chain
+		if err := broker.checkRollbackIndex(stub, sourceChainID, sequenceNum, dstRollbackMeta); err != nil {
+			return err
+		}
+
+		idx, err := strconv.ParseUint(sequenceNum, 10, 64)
+		if err != nil {
+			return err
+		}
+
+		if err := broker.markDstRollbackCounter(stub, sourceChainID, idx); err != nil {
 			return err
 		}
 	}
@@ -320,12 +365,12 @@ func (broker *Broker) invokeIndexUpdate(stub shim.ChaincodeStubInterface, args [
 
 	sourceChainID := args[0]
 	sequenceNum := args[1]
-	isReq, err := strconv.ParseBool(args[2])
+	reqType, err := strconv.ParseUint(args[3], 10, 64)
 	if err != nil {
 		return errorResponse(fmt.Sprintf("cannot parse %s to bool", args[3]))
 	}
 
-	if err := broker.updateIndex(stub, sourceChainID, sequenceNum, isReq); err != nil {
+	if err := broker.updateIndex(stub, sourceChainID, sequenceNum, reqType); err != nil {
 		return errorResponse(err.Error())
 	}
 
@@ -340,12 +385,12 @@ func (broker *Broker) invokeInterchain(stub shim.ChaincodeStubInterface, args []
 	sourceChainID := args[0]
 	sequenceNum := args[1]
 	targetCID := args[2]
-	isReq, err := strconv.ParseBool(args[3])
+	reqType, err := strconv.ParseUint(args[3], 10, 64)
 	if err != nil {
 		return errorResponse(fmt.Sprintf("cannot parse %s to bool", args[3]))
 	}
 
-	if err := broker.updateIndex(stub, sourceChainID, sequenceNum, isReq); err != nil {
+	if err := broker.updateIndex(stub, sourceChainID, sequenceNum, reqType); err != nil {
 		return errorResponse(err.Error())
 	}
 

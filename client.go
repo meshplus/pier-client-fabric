@@ -467,23 +467,49 @@ func (c *Client) RollbackIBTP(ibtp *pb.IBTP, isSrcChain bool) (*pb.RollbackIBTPR
 		return nil, nil
 	}
 
-	callFunc := CallFunc{
-		Func: content.Rollback,
-		Args: content.ArgsRb,
-	}
-	bizData, err := json.Marshal(callFunc)
-	if err != nil {
-		return ret, err
+	var resp *Response
+
+	if isSrcChain {
+		callFunc := CallFunc{
+			Func: content.Rollback,
+			Args: content.ArgsRb,
+		}
+		bizData, err := json.Marshal(callFunc)
+		if err != nil {
+			return ret, err
+		}
+
+		// 2 indicates it is to rollback src chain
+		_, resp, err = c.InvokeInterchain(ibtp.To, ibtp.Index, content.SrcContractId, 2, bizData)
+		if err != nil {
+			return nil, fmt.Errorf("invoke interchain for ibtp %s to call %s: %w", ibtp.ID(), content.Rollback, err)
+		}
+	} else {
+		callFunc := CallFunc{
+			Func: content.Func,
+			Args: content.Args,
+		}
+
+		callFunc.Args[len(callFunc.Args)-1] = []byte("true")
+		bizData, err := json.Marshal(callFunc)
+		if err != nil {
+			return ret, err
+		}
+
+		// 3 indicates it is to rollback dest chain
+		_, resp, err = c.InvokeInterchain(ibtp.From, ibtp.Index, content.DstContractId, 3, bizData)
+		if err != nil {
+			return nil, fmt.Errorf("invoke interchain for ibtp %s to call %s: %w", ibtp.ID(), content.Rollback, err)
+		}
 	}
 
-	// pb.IBTP_RESPONSE indicates it is to update callback counter
-	_, resp, err := c.InvokeInterchain(ibtp.To, ibtp.Index, content.SrcContractId, pb.IBTP_RESPONSE, bizData)
-	if err != nil {
-		return nil, fmt.Errorf("invoke interchain for ibtp %s to call %s: %w", ibtp.ID(), content.Rollback, err)
+	if resp == nil {
+		ret.Status = false
+		ret.Message = "empty response"
+	} else {
+		ret.Status = resp.OK
+		ret.Message = resp.Message
 	}
-
-	ret.Status = resp.OK
-	ret.Message = resp.Message
 
 	return ret, nil
 }

@@ -60,6 +60,22 @@ func (broker *Broker) getCallbackMeta(stub shim.ChaincodeStubInterface) pb.Respo
 	return shim.Success(v)
 }
 
+func (broker *Broker) getSrcRollbackMeta(stub shim.ChaincodeStubInterface) pb.Response {
+	v, err := stub.GetState(srcRollbackMeta)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	return shim.Success(v)
+}
+
+func (broker *Broker) getDstRollbackMeta(stub shim.ChaincodeStubInterface) pb.Response {
+	v, err := stub.GetState(dstRollbackMeta)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	return shim.Success(v)
+}
+
 func (broker *Broker) markInCounter(stub shim.ChaincodeStubInterface, from string) error {
 	inMeta, err := broker.getMap(stub, innerMeta)
 	if err != nil {
@@ -79,4 +95,26 @@ func (broker *Broker) markCallbackCounter(stub shim.ChaincodeStubInterface, from
 	meta[from] = index
 
 	return broker.putMap(stub, callbackMeta, meta)
+}
+
+func (broker *Broker) markDstRollbackCounter(stub shim.ChaincodeStubInterface, from string, index uint64) error {
+	meta, err := broker.getMap(stub, dstRollbackMeta)
+	if err != nil {
+		return err
+	}
+
+	meta[from] = index
+
+	return broker.putMap(stub, dstRollbackMeta, meta)
+}
+
+func (broker *Broker) markSrcRollbackCounter(stub shim.ChaincodeStubInterface, from string, index uint64) error {
+	meta, err := broker.getMap(stub, srcRollbackMeta)
+	if err != nil {
+		return err
+	}
+
+	meta[from] = index
+
+	return broker.putMap(stub, srcRollbackMeta, meta)
 }

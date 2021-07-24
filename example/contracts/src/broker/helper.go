@@ -200,3 +200,18 @@ func (broker *Broker) checkWhitelist(stub shim.ChaincodeStubInterface, function 
 
 	return broker.onlyWhitelist(stub)
 }
+
+func (broker *Broker) checkRollbackIndex(stub shim.ChaincodeStubInterface, addr string, index string, metaName string) error {
+	idx, err := strconv.ParseUint(index, 10, 64)
+	if err != nil {
+		return err
+	}
+	meta, err := broker.getMap(stub, metaName)
+	if err != nil {
+		return err
+	}
+	if meta[addr] >= idx {
+		return fmt.Errorf("incorrect index, expect %d", meta[addr]+1)
+	}
+	return nil
+}

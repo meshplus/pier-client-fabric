@@ -99,6 +99,7 @@ func (t *Transfer) transfer(stub shim.ChaincodeStubInterface, args []string) pb.
 		sender := args[2]
 		receiver := args[3]
 		amountArg := args[4]
+		isRollback := "false"
 
 		amount, err := getAmountArg(amountArg)
 		if err != nil {
@@ -121,7 +122,7 @@ func (t *Transfer) transfer(stub shim.ChaincodeStubInterface, args []string) pb.
 			return shim.Error(err.Error())
 		}
 
-		args := strings.Join([]string{sender, receiver, amountArg}, ",")
+		args := strings.Join([]string{sender, receiver, amountArg, isRollback}, ",")
 		argsRb := strings.Join([]string{sender, amountArg}, ",")
 		b := util.ToChaincodeArgs(emitInterchainEventFunc, dest, address, "interchainCharge", args, "", "", "interchainRollback", argsRb)
 		response := stub.InvokeChaincode(brokerContractName, b, channelID)
@@ -176,6 +177,7 @@ func (t *Transfer) interchainCharge(stub shim.ChaincodeStubInterface, args []str
 	sender := args[0]
 	receiver := args[1]
 	amountArg := args[2]
+	isRollback := args[3]
 
 	// check for sender info
 	if sender == "" {
@@ -192,7 +194,12 @@ func (t *Transfer) interchainCharge(stub shim.ChaincodeStubInterface, args []str
 		return shim.Error(fmt.Errorf("get balancee from %s %w", receiver, err).Error())
 	}
 
-	balance += amount
+	if isRollback != "true" {
+		balance += amount
+	} else {
+		balance -= amount
+	}
+
 	err = stub.PutState(receiver, []byte(strconv.FormatUint(balance, 10)))
 	if err != nil {
 		return shim.Error(err.Error())
