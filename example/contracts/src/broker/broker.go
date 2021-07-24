@@ -369,7 +369,7 @@ func (broker *Broker) invokeIndexUpdate(stub shim.ChaincodeStubInterface, args [
 
 	sourceChainID := args[0]
 	sequenceNum := args[1]
-	reqType, err := strconv.ParseUint(args[3], 10, 64)
+	reqType, err := strconv.ParseUint(args[2], 10, 64)
 	if err != nil {
 		return errorResponse(fmt.Sprintf("cannot parse %s to bool", args[3]))
 	}
