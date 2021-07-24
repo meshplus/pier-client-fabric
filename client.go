@@ -254,9 +254,19 @@ func (c *Client) SubmitIBTP(ibtp *pb.IBTP) (*pb.SubmitIBTPResponse, error) {
 		logger.Info("arg", strconv.Itoa(i), string(arg))
 	}
 
-	if ibtp.Category() == pb.IBTP_RESPONSE && content.Func == "" {
+	if ibtp.Category() == pb.IBTP_RESPONSE && content.Func == "" || ibtp.Type == pb.IBTP_ROLLBACK {
 		logger.Info("InvokeIndexUpdate", "ibtp", ibtp.ID())
-		_, resp, err := c.InvokeIndexUpdate(ibtp.From, ibtp.Index, uint64(ibtp.Category()))
+		chResp, resp, err := c.InvokeIndexUpdate(ibtp.From, ibtp.Index, uint64(ibtp.Category()))
+		if err != nil {
+			return nil, err
+		}
+
+		proof, err := c.getProof(*chResp)
+		if err != nil {
+			return ret, err
+		}
+
+		ret.Result, err = c.generateCallback(ibtp, nil, proof, resp.OK)
 		if err != nil {
 			return nil, err
 		}
