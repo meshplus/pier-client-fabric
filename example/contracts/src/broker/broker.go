@@ -89,6 +89,10 @@ func (broker *Broker) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		return broker.getOuterMeta(stub)
 	case "getCallbackMeta":
 		return broker.getCallbackMeta(stub)
+	case "getSrcRollbackMeta":
+		return broker.getSrcRollbackMeta(stub)
+	case "getDstRollbackMeta":
+		return broker.getDstRollbackMeta(stub)
 	case "getInMessage":
 		return broker.getInMessage(stub, args)
 	case "getOutMessage":
