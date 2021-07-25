@@ -256,7 +256,11 @@ func (c *Client) SubmitIBTP(ibtp *pb.IBTP) (*pb.SubmitIBTPResponse, error) {
 
 	if ibtp.Category() == pb.IBTP_RESPONSE && content.Func == "" || ibtp.Type == pb.IBTP_ROLLBACK {
 		logger.Info("InvokeIndexUpdate", "ibtp", ibtp.ID())
-		chResp, resp, err := c.InvokeIndexUpdate(ibtp.From, ibtp.Index, uint64(ibtp.Category()))
+		typ := 1
+		if ibtp.Type == pb.IBTP_ROLLBACK {
+			typ = 0
+		}
+		chResp, resp, err := c.InvokeIndexUpdate(ibtp.From, ibtp.Index, uint64(typ))
 		if err != nil {
 			return nil, err
 		}
