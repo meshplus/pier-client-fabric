@@ -92,8 +92,7 @@ func (t *Transfer) transfer(stub shim.ChaincodeStubInterface, args []string) pb.
 
 		return shim.Success(nil)
 	case 4:
-		// args[0]: destination appchain contract did
-		destContractDID := args[0]
+		dstServiceID := args[0]
 		sender := args[1]
 		receiver := args[2]
 		amountArg := args[3]
@@ -121,7 +120,7 @@ func (t *Transfer) transfer(stub shim.ChaincodeStubInterface, args []string) pb.
 
 		args := strings.Join([]string{sender, receiver, amountArg}, ",")
 		argsRb := strings.Join([]string{sender, amountArg}, ",")
-		b := util.ToChaincodeArgs(emitInterchainEventFunc, destContractDID, "interchainCharge", args, "", "", "interchainRollback", argsRb)
+		b := util.ToChaincodeArgs(emitInterchainEventFunc, dstServiceID, "interchainCharge,,interchainRollback", args, "", argsRb)
 		response := stub.InvokeChaincode(brokerContractName, b, channelID)
 		if response.Status != shim.OK {
 			return shim.Error(fmt.Errorf("invoke broker chaincode %s", response.Message).Error())

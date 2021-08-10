@@ -2,14 +2,13 @@ package main
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/meshplus/bitxhub-model/pb"
 )
 
-func (c *Client) generateCallback(original *pb.IBTP, args [][]byte, proof []byte, status bool) (result *pb.IBTP, err error) {
+func (c *Client) generateCallback(original *pb.IBTP, args [][]byte, status bool) (result *pb.IBTP, err error) {
 	if original == nil {
-		return nil, fmt.Errorf("got nil ibtp to generate receipt: %w", err)
+		return nil, fmt.Errorf("got nil ibtp To generate receipt: %w", err)
 	}
 	pd := &pb.Payload{}
 	if err := pd.Unmarshal(original.Payload); err != nil {
@@ -20,10 +19,9 @@ func (c *Client) generateCallback(original *pb.IBTP, args [][]byte, proof []byte
 	if err := originalContent.Unmarshal(pd.Content); err != nil {
 		return nil, fmt.Errorf("ibtp payload unmarshal: %w", err)
 	}
-	content := &pb.Content{
-		SrcContractId: originalContent.DstContractId,
-		DstContractId: originalContent.SrcContractId,
-	}
+
+	content := &pb.Content{}
+	typ := pb.IBTP_RECEIPT_SUCCESS
 
 	if status {
 		content.Func = originalContent.Callback
@@ -31,6 +29,11 @@ func (c *Client) generateCallback(original *pb.IBTP, args [][]byte, proof []byte
 	} else {
 		content.Func = originalContent.Rollback
 		content.Args = originalContent.ArgsRb
+		typ = pb.IBTP_RECEIPT_FAILURE
+	}
+
+	if original.Type == pb.IBTP_ROLLBACK {
+		typ = pb.IBTP_RECEIPT_ROLLBACK
 	}
 
 	b, err := content.Marshal()
@@ -46,19 +49,13 @@ func (c *Client) generateCallback(original *pb.IBTP, args [][]byte, proof []byte
 		return nil, err
 	}
 
-	typ := pb.IBTP_RECEIPT_SUCCESS
-	if !status {
-		typ = pb.IBTP_RECEIPT_FAILURE
-	}
-
 	return &pb.IBTP{
-		From:      original.From,
-		To:        original.To,
-		Index:     original.Index,
-		Type:      typ,
-		Timestamp: time.Now().UnixNano(),
-		Proof:     proof,
-		Payload:   pdb,
-		Version:   original.Version,
+		From:    original.From,
+		To:      original.To,
+		Index:   original.Index,
+		Type:    typ,
+		Proof:   original.Proof,
+		Payload: pdb,
+		Version: original.Version,
 	}, nil
 }
