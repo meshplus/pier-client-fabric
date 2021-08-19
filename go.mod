@@ -3,6 +3,7 @@ module github.com/meshplus/pier-client-fabric
 go 1.13
 
 require (
+	github.com/Knetic/govaluate v3.0.0+incompatible // indirect
 	github.com/Rican7/retry v0.1.0
 	github.com/VividCortex/gohistogram v1.0.0 // indirect
 	github.com/cloudflare/cfssl v0.0.0-20190409034051-768cd563887f

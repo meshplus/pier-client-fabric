@@ -334,12 +334,16 @@ func (broker *Broker) updateIndex(stub shim.ChaincodeStubInterface, srcChainServ
 		}
 	} else if reqType == 2 {
 		inServicePair := genServicePair(srcChainServiceID, curServiceID)
-		if err := broker.checkIndex(stub, inServicePair, sequenceNum, dstRollbackMeta); err != nil {
-			return err
-		}
 		idx, err := strconv.ParseUint(sequenceNum, 10, 64)
 		if err != nil {
 			return err
+		}
+		meta, err := broker.getMap(stub, dstRollbackMeta)
+		if err != nil {
+			return err
+		}
+		if idx < meta[inServicePair]+1 {
+			return fmt.Errorf("incorrect index, expect %d", meta[inServicePair]+1)
 		}
 		if err := broker.markDstRollbackCounter(stub, inServicePair, idx); err != nil {
 			return err
