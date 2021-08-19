@@ -42,7 +42,7 @@ func errorResponse(msg string) pb.Response {
 		panic(err)
 	}
 
-	return shim.Success(data)
+	return shim.Error(string(data))
 }
 
 // putMap for persisting meta state into ledger
