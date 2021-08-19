@@ -565,7 +565,7 @@ func (c *Client) GetReceipt(ibtp *pb.IBTP) (*pb.IBTP, error) {
 	return c.generateCallback(ibtp, result[1:], status)
 }
 
-func (c Client) InvokeIndexUpdate(from string, index uint64, serviceId string, category pb.IBTP_Category) (*channel.Response, *Response, error) {
+func (c *Client) InvokeIndexUpdate(from string, index uint64, serviceId string, category pb.IBTP_Category) (*channel.Response, *Response, error) {
 	reqType := strconv.FormatUint(uint64(category), 10)
 	args := util.ToChaincodeArgs(from, strconv.FormatUint(index, 10), serviceId, reqType)
 	request := channel.Request{

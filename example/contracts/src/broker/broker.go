@@ -312,7 +312,7 @@ func (broker *Broker) updateIndex(stub shim.ChaincodeStubInterface, srcChainServ
 	if reqType == 0 {
 		inServicePair := genServicePair(srcChainServiceID, curServiceID)
 		if err := broker.checkIndex(stub, inServicePair, sequenceNum, innerMeta); err != nil {
-			return err
+			return fmt.Errorf("inner meta:%v", err)
 		}
 
 		if err := broker.markInCounter(stub, inServicePair); err != nil {
@@ -322,7 +322,7 @@ func (broker *Broker) updateIndex(stub shim.ChaincodeStubInterface, srcChainServ
 		outServicePair := genServicePair(curServiceID, srcChainServiceID)
 
 		if err := broker.checkIndex(stub, outServicePair, sequenceNum, callbackMeta); err != nil {
-			return err
+			return fmt.Errorf("callback:%v", err)
 		}
 
 		idx, err := strconv.ParseUint(sequenceNum, 10, 64)
@@ -343,7 +343,7 @@ func (broker *Broker) updateIndex(stub shim.ChaincodeStubInterface, srcChainServ
 			return err
 		}
 		if idx < meta[inServicePair]+1 {
-			return fmt.Errorf("incorrect index, expect %d", meta[inServicePair]+1)
+			return fmt.Errorf("incorrect dstRollback index, expect %d", meta[inServicePair]+1)
 		}
 		if err := broker.markDstRollbackCounter(stub, inServicePair, idx); err != nil {
 			return err
@@ -354,8 +354,8 @@ func (broker *Broker) updateIndex(stub shim.ChaincodeStubInterface, srcChainServ
 }
 
 func (broker *Broker) invokeIndexUpdate(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	if len(args) != 3 {
-		return errorResponse("incorrect number of arguments, expecting 3")
+	if len(args) != 4 {
+		return errorResponse("incorrect number of arguments, expecting 4")
 	}
 
 	srcServiceID := args[0]
