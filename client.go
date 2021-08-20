@@ -296,13 +296,13 @@ func (c *Client) SubmitIBTP(ibtp *pb.IBTP) (*pb.SubmitIBTPResponse, error) {
 		ret.Status = false
 		ret.Message = fmt.Sprintf("marshal ibtp %s func %s and args: %s", ibtp.ID(), callFunc.Func, err.Error())
 
-		res, _, err := c.InvokeIndexUpdate(ibtp.From, ibtp.Index, serviceID, ibtp.Category())
+		res, _, err := c.InvokeIndexUpdate(srcChainServiceID, ibtp.Index, serviceID, ibtp.Category())
 		if err != nil {
 			return nil, err
 		}
 		chResp = res
 	} else {
-		res, resp, err := c.InvokeInterchain(ibtp.From, ibtp.Index, serviceID, uint64(ibtp.Category()), bizData)
+		res, resp, err := c.InvokeInterchain(srcChainServiceID, ibtp.Index, serviceID, uint64(ibtp.Category()), bizData)
 		if err != nil {
 			return nil, fmt.Errorf("invoke interchain for ibtp %s to call %s: %w", ibtp.ID(), content.Func, err)
 		}

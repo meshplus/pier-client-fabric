@@ -26,30 +26,30 @@ jobs:
         uses: creekorful/goreportcard-action@v1.0
 
 
-  test:
-    name: Run unittest
-    runs-on: ubuntu-latest
-    steps:
-      - name: Set up Go
-        uses: actions/setup-go@v1
-        with:
-          go-version: 1.13
-
-      - name: Check out code
-        uses: actions/checkout@v1
-
-      - name: Run Unit tests.
-        run: |
-          git clone https://github.com/meshplus/pier.git ../pier
-          export PATH=$PATH:$(go env GOPATH)/bin
-          make prepare
-          make test-coverage
-
-          #      - name: Upload Coverage report to CodeCov
-          # uses: codecov/codecov-action@v1.0.0
-          # with:
-          # token: ${{secrets.CODECOV_TOKEN}}
-          #file: ./coverage.txt
+#  test:
+#    name: Run unittest
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Set up Go
+#        uses: actions/setup-go@v1
+#        with:
+#          go-version: 1.13
+#
+#      - name: Check out code
+#        uses: actions/checkout@v1
+#
+#      - name: Run Unit tests.
+#        run: |
+#          git clone https://github.com/meshplus/pier.git ../pier
+#          export PATH=$PATH:$(go env GOPATH)/bin
+#          make prepare
+#          make test-coverage
+#
+#          #      - name: Upload Coverage report to CodeCov
+#          # uses: codecov/codecov-action@v1.0.0
+#          # with:
+#          # token: ${{secrets.CODECOV_TOKEN}}
+#          #file: ./coverage.txt
 
   build:
     name: Build project
