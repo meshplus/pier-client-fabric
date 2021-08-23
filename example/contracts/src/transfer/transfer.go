@@ -92,8 +92,7 @@ func (t *Transfer) transfer(stub shim.ChaincodeStubInterface, args []string) pb.
 
 		return shim.Success(nil)
 	case 4:
-		// args[0]: destination appchain contract did
-		destContractDID := args[0]
+		dstServiceID := args[0]
 		sender := args[1]
 		receiver := args[2]
 		amountArg := args[3]
@@ -119,9 +118,9 @@ func (t *Transfer) transfer(stub shim.ChaincodeStubInterface, args []string) pb.
 			return shim.Error(err.Error())
 		}
 
-		args := strings.Join([]string{sender, receiver, amountArg}, ",")
+		args := strings.Join([]string{sender, receiver, amountArg, "false"}, ",")
 		argsRb := strings.Join([]string{sender, amountArg}, ",")
-		b := util.ToChaincodeArgs(emitInterchainEventFunc, destContractDID, "interchainCharge", args, "", "", "interchainRollback", argsRb)
+		b := util.ToChaincodeArgs(emitInterchainEventFunc, dstServiceID, "interchainCharge,,interchainRollback", args, "", argsRb)
 		response := stub.InvokeChaincode(brokerContractName, b, channelID)
 		if response.Status != shim.OK {
 			return shim.Error(fmt.Errorf("invoke broker chaincode %s", response.Message).Error())
@@ -167,13 +166,14 @@ func (t *Transfer) setBalance(stub shim.ChaincodeStubInterface, args []string) p
 
 // charge user,amount
 func (t *Transfer) interchainCharge(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	if len(args) != 3 {
+	if len(args) != 4 {
 		return shim.Error("incorrect number of arguments, expect 3")
 	}
 
 	sender := args[0]
 	receiver := args[1]
 	amountArg := args[2]
+	isRollback := args[3]
 
 	// check for sender info
 	if sender == "" {
@@ -190,7 +190,12 @@ func (t *Transfer) interchainCharge(stub shim.ChaincodeStubInterface, args []str
 		return shim.Error(fmt.Errorf("get balancee from %s %w", receiver, err).Error())
 	}
 
-	balance += amount
+	// TODO: deal with rollback failure (balance not enough)
+	if isRollback == "true" {
+		balance -= amount
+	} else {
+		balance += amount
+	}
 	err = stub.PutState(receiver, []byte(strconv.FormatUint(balance, 10)))
 	if err != nil {
 		return shim.Error(err.Error())

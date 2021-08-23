@@ -1,6 +1,17 @@
+[fabric]
 addr = "host.docker.internal:7053"
 event_filter = "interchain-event-name"
 username = "Admin"
 ccid = "broker"
 channel_id = "mychannel"
 org = "org2"
+timeout_height = 10
+chain_id = "3"
+
+[[services]]
+id = "mychannel&transfer"
+name = "transfer"
+
+[[services]]
+id = "mychannel&data_swapper"
+name = "data_swapper"

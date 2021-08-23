@@ -1,43 +1,36 @@
 package main
 
 import (
+	"fmt"
 	"strings"
-	"time"
 
 	"github.com/cloudflare/cfssl/log"
 	"github.com/meshplus/bitxhub-model/pb"
-	"github.com/meshplus/bitxid"
 )
 
 type Event struct {
-	Index          uint64 `json:"index"`
-	DstContractDID string `json:"dst_contract_did"`
-	SrcContractID  string `json:"src_contract_id"`
-	Func           string `json:"func"`
-	Args           string `json:"args"`
-	Callback       string `json:"callback"`
-	Argscb         string `json:"argscb"`
-	Rollback       string `json:"rollback"`
-	Argsrb         string `json:"argsrb"`
-	Proof          []byte `json:"proof"`
-	Extra          []byte `json:"extra"`
+	Index     uint64 `json:"index"`
+	DstFullID string `json:"dst_full_id"`
+	SrcFullID string `json:"src_full_id"`
+	Func      string `json:"func"`
+	Args      string `json:"args"`
+	Argscb    string `json:"argscb"`
+	Argsrb    string `json:"argsrb"`
 }
 
-func (ev *Event) Convert2IBTP(srcMethod string, ibtpType pb.IBTP_Type) *pb.IBTP {
+func (ev *Event) Convert2IBTP(timeoutHeight int64, ibtpType pb.IBTP_Type) *pb.IBTP {
 	pd, err := ev.encryptPayload()
 	if err != nil {
 		log.Fatalf("Get ibtp payload :%s", err)
 	}
 
 	return &pb.IBTP{
-		From:      srcMethod,
-		To:        string(bitxid.DID(ev.DstContractDID).GetChainDID()),
-		Index:     ev.Index,
-		Type:      ibtpType,
-		Timestamp: time.Now().UnixNano(),
-		Proof:     ev.Proof,
-		Payload:   pd,
-		Extra:     ev.Extra,
+		From:          ev.SrcFullID,
+		To:            ev.DstFullID,
+		Index:         ev.Index,
+		Type:          ibtpType,
+		TimeoutHeight: timeoutHeight,
+		Payload:       pd,
 	}
 }
 
@@ -51,15 +44,17 @@ func handleArgs(args string) [][]byte {
 }
 
 func (ev *Event) encryptPayload() ([]byte, error) {
+	funcSplit := strings.Split(ev.Func, ",")
+	if len(funcSplit) != 3 {
+		return nil, fmt.Errorf("ibtp func not is (func, callback,rollback)")
+	}
 	content := &pb.Content{
-		SrcContractId: ev.SrcContractID,
-		DstContractId: bitxid.DID(ev.DstContractDID).GetAddress(),
-		Func:          ev.Func,
-		Args:          handleArgs(ev.Args),
-		Callback:      ev.Callback,
-		ArgsCb:        handleArgs(ev.Argscb),
-		Rollback:      ev.Rollback,
-		ArgsRb:        handleArgs(ev.Argsrb),
+		Func:     funcSplit[0],
+		Args:     handleArgs(ev.Args),
+		Callback: funcSplit[1],
+		ArgsCb:   handleArgs(ev.Argscb),
+		Rollback: funcSplit[2],
+		ArgsRb:   handleArgs(ev.Argsrb),
 	}
 	data, err := content.Marshal()
 	if err != nil {

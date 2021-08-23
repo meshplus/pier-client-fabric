@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
-	"strings"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
@@ -43,7 +42,7 @@ func errorResponse(msg string) pb.Response {
 		panic(err)
 	}
 
-	return shim.Success(data)
+	return shim.Error(string(data))
 }
 
 // putMap for persisting meta state into ledger
@@ -200,24 +199,4 @@ func (broker *Broker) checkWhitelist(stub shim.ChaincodeStubInterface, function 
 	}
 
 	return broker.onlyWhitelist(stub)
-}
-
-func (broker *Broker) validDID(did string) bool {
-	s := strings.Split(did, ":")
-	if len(s) != 4 || s[0] != "did" || s[1] == "" || s[2] == "" || s[3] == "" {
-		return false
-	}
-	return true
-}
-
-func parseMethod(did string) string {
-	s := strings.Split(did, ":")
-	if len(s) != 4 || s[0] != "did" || s[1] == "" || s[2] == "" || s[3] == "" {
-		return ""
-	}
-	return fmt.Sprintf("%s:%s:%s:.", s[0], s[1], s[2])
-}
-
-func ErrInvalidDID(did string) pb.Response {
-	return errorResponse(fmt.Sprintf("Invalid did format for %s", did))
 }
