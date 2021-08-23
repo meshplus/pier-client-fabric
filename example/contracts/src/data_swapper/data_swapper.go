@@ -62,9 +62,9 @@ func (s *DataSwapper) get(stub shim.ChaincodeStubInterface, args []string) pb.Re
 
 		return shim.Success(value)
 	case 2:
-		// args[0]: destination appchain contract did
+		// args[0]: destination appchain service id
 		// args[1]: key
-		b := util.ToChaincodeArgs(emitInterchainEventFunc, args[0], "interchainGet", args[2], "interchainSet", args[2], "", "")
+		b := util.ToChaincodeArgs(emitInterchainEventFunc, args[0], "interchainGet", args[1], "interchainSet", args[1], "", "")
 		response := stub.InvokeChaincode(brokerContractName, b, channelID)
 		if response.Status != shim.OK {
 			return shim.Error(fmt.Errorf("invoke broker chaincode %s error: %s", brokerContractName, response.Message).Error())
@@ -78,16 +78,31 @@ func (s *DataSwapper) get(stub shim.ChaincodeStubInterface, args []string) pb.Re
 
 // get is business function which will invoke the to,tid,id
 func (s *DataSwapper) set(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	if len(args) != 2 {
+	switch len(args) {
+	case 2:
+		// args[0]: key
+		// args[1]: value
+		err := stub.PutState(args[0], []byte(args[1]))
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+
+		return shim.Success(nil)
+	case 3:
+		// args[0]: destination appchain service id
+		// args[1]: key
+		// args[2]: value
+		argsCall := strings.Join([]string{args[1], args[2]}, ",")
+		b := util.ToChaincodeArgs(emitInterchainEventFunc, args[0], "interchainSet", argsCall, "", "", "", "")
+		response := stub.InvokeChaincode(brokerContractName, b, channelID)
+		if response.Status != shim.OK {
+			return shim.Error(fmt.Errorf("invoke broker chaincode %s error: %s", brokerContractName, response.Message).Error())
+		}
+
+		return shim.Success(nil)
+	default:
 		return shim.Error("incorrect number of arguments")
 	}
-
-	err := stub.PutState(args[0], []byte(args[1]))
-	if err != nil {
-		return shim.Error(err.Error())
-	}
-
-	return shim.Success(nil)
 }
 
 // interchainSet is the callback function getting data by interchain
