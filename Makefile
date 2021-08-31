@@ -19,6 +19,7 @@ test-coverage:
 
 ## make fabric1.4: build fabric(1.4) client plugin
 fabric1.4:
+	@packr
 	mkdir -p build
 	$(GO) build -o build/fabric-client-1.4 ./*.go
 

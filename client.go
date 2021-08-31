@@ -12,7 +12,6 @@ import (
 	"github.com/Rican7/retry/strategy"
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-plugin"
 	"github.com/hyperledger/fabric-chaincode-go/shim"
 	"github.com/hyperledger/fabric-protos-go/common"
 	"github.com/hyperledger/fabric-protos-go/peer"
@@ -680,18 +679,6 @@ func (h *handler) HandleMessage(deliveries *fab.CCEvent, payload []byte) {
 
 		h.eventC <- e
 	}
-}
-
-func main() {
-	plugin.Serve(&plugin.ServeConfig{
-		HandshakeConfig: plugins.Handshake,
-		Plugins: map[string]plugin.Plugin{
-			plugins.PluginName: &plugins.AppchainGRPCPlugin{Impl: &Client{}},
-		},
-		GRPCServer: plugin.DefaultGRPCServer,
-	})
-
-	logger.Info("Plugin server down")
 }
 
 func parseChainServiceID(id string) (string, string, string, error) {
