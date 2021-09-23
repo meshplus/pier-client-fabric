@@ -7,7 +7,10 @@ require (
 	github.com/Rican7/retry v0.1.0
 	github.com/VividCortex/gohistogram v1.0.0 // indirect
 	github.com/cloudflare/cfssl v0.0.0-20190409034051-768cd563887f
+	github.com/fatih/color v1.9.0
 	github.com/go-logfmt/logfmt v0.4.0 // indirect
+	github.com/gobuffalo/packd v1.0.0
+	github.com/gobuffalo/packr v1.30.1
 	github.com/golang/protobuf v1.5.2
 	github.com/google/certificate-transparency-go v1.1.0 // indirect
 	github.com/hashicorp/go-hclog v0.0.0-20180709165350-ff2cf002a8dd
@@ -20,6 +23,7 @@ require (
 	github.com/meshplus/bitxhub-model v1.2.1-0.20210805064451-03258148acad
 	github.com/meshplus/pier v1.11.1-0.20210809064238-de527e06d443
 	github.com/spf13/viper v1.7.0
+	github.com/urfave/cli v1.22.1
 )
 
 replace (
