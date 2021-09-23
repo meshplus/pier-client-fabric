@@ -81,11 +81,10 @@ func (c *Client) Initialize(configPath, appchainID string, extra []byte) error {
 	}
 	fabricConfig := config.Fabric
 	contractmeta := &ContractMeta{
-		EventFilter: fabricConfig.EventFilter,
-		Username:    fabricConfig.Username,
-		CCID:        fabricConfig.CCID,
-		ChannelID:   fabricConfig.ChannelId,
-		ORG:         fabricConfig.Org,
+		Username:  fabricConfig.Username,
+		CCID:      fabricConfig.CCID,
+		ChannelID: fabricConfig.ChannelId,
+		ORG:       fabricConfig.Org,
 	}
 
 	m := make(map[string]*pb.Interchain)
