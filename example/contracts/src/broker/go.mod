@@ -3,9 +3,12 @@ module github.com/meshplus/broker
 go 1.13
 
 require (
-	github.com/Knetic/govaluate v3.0.0+incompatible // indirect
+	github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible // indirect
 	github.com/Shopify/sarama v1.29.1 // indirect
+	github.com/btcsuite/btcd v0.21.0-beta // indirect
+	github.com/ethereum/go-ethereum v1.10.9
 	github.com/fsouza/go-dockerclient v1.7.3 // indirect
+	github.com/golang/protobuf v1.5.2
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0 // indirect
 	github.com/hashicorp/go-version v1.3.0 // indirect
 	github.com/hyperledger/fabric v1.4.3
@@ -19,5 +22,3 @@ require (
 	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97 // indirect
 	google.golang.org/grpc v1.39.0 // indirect
 )
-
-replace github.com/golang/protobuf => github.com/golang/protobuf v1.3.2

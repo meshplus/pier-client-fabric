@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/cloudflare/cfssl/log"
@@ -9,13 +8,13 @@ import (
 )
 
 type Event struct {
-	Index     uint64 `json:"index"`
-	DstFullID string `json:"dst_full_id"`
-	SrcFullID string `json:"src_full_id"`
-	Func      string `json:"func"`
-	Args      string `json:"args"`
-	Argscb    string `json:"argscb"`
-	Argsrb    string `json:"argsrb"`
+	Index     uint64   `json:"index"`
+	DstFullID string   `json:"dst_full_id"`
+	SrcFullID string   `json:"src_full_id"`
+	Encrypt   bool     `json:"encrypt"`
+	CallFunc  CallFunc `json:"call_func"`
+	CallBack  CallFunc `json:"callback"`
+	RollBack  CallFunc `json:"rollback"`
 }
 
 func (ev *Event) Convert2IBTP(timeoutHeight int64, ibtpType pb.IBTP_Type) *pb.IBTP {
@@ -44,17 +43,9 @@ func handleArgs(args string) [][]byte {
 }
 
 func (ev *Event) encryptPayload() ([]byte, error) {
-	funcSplit := strings.Split(ev.Func, ",")
-	if len(funcSplit) != 3 {
-		return nil, fmt.Errorf("ibtp func not is (func, callback,rollback)")
-	}
 	content := &pb.Content{
-		Func:     funcSplit[0],
-		Args:     handleArgs(ev.Args),
-		Callback: funcSplit[1],
-		ArgsCb:   handleArgs(ev.Argscb),
-		Rollback: funcSplit[2],
-		ArgsRb:   handleArgs(ev.Argsrb),
+		Func: ev.CallFunc.Func,
+		Args: ev.CallFunc.Args,
 	}
 	data, err := content.Marshal()
 	if err != nil {

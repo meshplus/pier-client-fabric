@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -118,12 +119,27 @@ func (t *Transfer) transfer(stub shim.ChaincodeStubInterface, args []string) pb.
 			return shim.Error(err.Error())
 		}
 
-		args := strings.Join([]string{sender, receiver, amountArg, "false"}, ",")
-		argsRb := strings.Join([]string{sender, amountArg}, ",")
-		b := util.ToChaincodeArgs(emitInterchainEventFunc, dstServiceID, "interchainCharge,,interchainRollback", args, "", argsRb)
+		var callArgs, argsRb [][]byte
+		callArgs = append(callArgs, []byte(sender))
+		callArgs = append(callArgs, []byte(receiver))
+		callArgs = append(callArgs, []byte(amountArg))
+
+		argsRb = append(argsRb, []byte(sender))
+		argsRb = append(argsRb, []byte(amountArg))
+
+		callArgsBytes, err := json.Marshal(callArgs)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		argsRbBytes, err := json.Marshal(argsRb)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+
+		b := util.ToChaincodeArgs(emitInterchainEventFunc, dstServiceID, "interchainCharge", string(callArgsBytes), "", "", "interchainRollback", string(argsRbBytes), strconv.FormatBool(false))
 		response := stub.InvokeChaincode(brokerContractName, b, channelID)
 		if response.Status != shim.OK {
-			return shim.Error(fmt.Errorf("invoke broker chaincode %s", response.Message).Error())
+			return shim.Error(fmt.Errorf("invoke broker chaincode: %d - %s", response.Status, response.Message).Error())
 		}
 
 		return shim.Success(nil)

@@ -21,6 +21,7 @@ type Fabric struct {
 	CCID          string `toml:"ccid" json:"ccid"`
 	ChannelId     string `mapstructure:"channel_id" toml:"channel_id" json:"channel_id"`
 	Org           string `toml:"org" json:"org"`
+	ServerPort    string `toml:"server_port" json:"server_port"`
 	TimeoutHeight int64  `mapstructure:"timeout_height" json:"timeout_height"`
 }
 
@@ -35,7 +36,7 @@ func DefaultConfig() *Config {
 		Fabric: Fabric{
 			Name:          "fabric",
 			Username:      "Admin",
-			CCID:          "Broker-001",
+			CCID:          "broker",
 			ChannelId:     "mychannel",
 			Org:           "org2",
 			TimeoutHeight: 30,
