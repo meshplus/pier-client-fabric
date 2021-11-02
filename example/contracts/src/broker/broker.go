@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/hyperledger/fabric/core/chaincode/lib/cid"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	pb "github.com/hyperledger/fabric/protos/peer"
@@ -635,10 +634,10 @@ func (broker *Broker) invokeInterchain(stub shim.ChaincodeStubInterface, args []
 	if err != nil {
 		return errorResponse(err.Error())
 	}
-	typ, err := strconv.ParseUint(args[3], 10, 64)
-	if err != nil {
-		return errorResponse(err.Error())
-	}
+	// typ, err := strconv.ParseUint(args[3], 10, 64)
+	// if err != nil {
+	// 	return errorResponse(err.Error())
+	// }
 	callFunc := args[4]
 	var callArgs [][]byte
 	if err := json.Unmarshal([]byte(args[5]), &callArgs); err != nil {
@@ -667,9 +666,9 @@ func (broker *Broker) invokeInterchain(stub shim.ChaincodeStubInterface, args []
 		return errorResponse(err.Error())
 	}
 
-	if err := broker.checkInterchainMultiSigns(stub, srcFullID, dstFullID, index, typ, callFunc, callArgs, txStatus, signatures); err != nil {
-		return errorResponse(err.Error())
-	}
+	// if err := broker.checkInterchainMultiSigns(stub, srcFullID, dstFullID, index, typ, callFunc, callArgs, txStatus, signatures); err != nil {
+	// 	return errorResponse(err.Error())
+	// }
 
 	var ccArgs [][]byte
 	var response pb.Response
@@ -768,10 +767,10 @@ func (broker *Broker) invokeReceipt(stub shim.ChaincodeStubInterface, args []str
 	if err != nil {
 		return errorResponse(err.Error())
 	}
-	err = broker.checkReceiptMultiSigns(stub, srcFullID, dstFullID, index, typ, result, txStatus, signatures)
-	if err != nil {
-		return errorResponse(err.Error())
-	}
+	// err = broker.checkReceiptMultiSigns(stub, srcFullID, dstFullID, index, typ, result, txStatus, signatures)
+	// if err != nil {
+	// 	return errorResponse(err.Error())
+	// }
 
 	outServicePair := genServicePair(srcFullID, dstFullID)
 	messages, err := broker.getOutMessages(stub)
@@ -798,84 +797,84 @@ func (broker *Broker) invokeReceipt(stub shim.ChaincodeStubInterface, args []str
 	return successResponse(response.Payload)
 }
 
-func (broker *Broker) checkInterchainMultiSigns(stub shim.ChaincodeStubInterface, srcFullID, dstFullID string, index uint64, typ uint64, callFunc string, args [][]byte, txStatus uint64, multiSignatures [][]byte) error {
-	threshold, err := broker.getAdminThreshold(stub)
-	if err != nil {
-		return err
-	}
-	if threshold == 0 {
-		return nil
-	}
+// func (broker *Broker) checkInterchainMultiSigns(stub shim.ChaincodeStubInterface, srcFullID, dstFullID string, index uint64, typ uint64, callFunc string, args [][]byte, txStatus uint64, multiSignatures [][]byte) error {
+// 	threshold, err := broker.getAdminThreshold(stub)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	if threshold == 0 {
+// 		return nil
+// 	}
 
-	var funcPacked, packed []byte
+// 	var funcPacked, packed []byte
 
-	packed = append(packed, []byte(srcFullID)...)
-	packed = append(packed, []byte(dstFullID)...)
-	packed = append(packed, uint64ToBytesInBigEndian(index)...)
-	packed = append(packed, uint64ToBytesInBigEndian(typ)...)
-	funcPacked = append(funcPacked, []byte(callFunc)...)
-	for _, arg := range args {
-		funcPacked = append(funcPacked, arg...)
-	}
+// 	packed = append(packed, []byte(srcFullID)...)
+// 	packed = append(packed, []byte(dstFullID)...)
+// 	packed = append(packed, uint64ToBytesInBigEndian(index)...)
+// 	packed = append(packed, uint64ToBytesInBigEndian(typ)...)
+// 	funcPacked = append(funcPacked, []byte(callFunc)...)
+// 	for _, arg := range args {
+// 		funcPacked = append(funcPacked, arg...)
+// 	}
 
-	packed = append(packed, crypto.Keccak256(funcPacked)...)
-	packed = append(packed, uint64ToBytesInBigEndian(txStatus)...)
-	hash := crypto.Keccak256(packed)
+// 	packed = append(packed, crypto.Keccak256(funcPacked)...)
+// 	packed = append(packed, uint64ToBytesInBigEndian(txStatus)...)
+// 	hash := crypto.Keccak256(packed)
 
-	if broker.checkMultiSigns(stub, hash, multiSignatures) {
-		return fmt.Errorf("verify multi signatures failed")
-	}
+// 	if broker.checkMultiSigns(stub, hash, multiSignatures) {
+// 		return fmt.Errorf("verify multi signatures failed")
+// 	}
 
-	return nil
-}
+// 	return nil
+// }
 
-func (broker *Broker) checkReceiptMultiSigns(stub shim.ChaincodeStubInterface, srcFullID, dstFullID string, index uint64, typ uint64, result [][]byte, txStatus uint64, multiSignatures [][]byte) error {
-	threshold, err := broker.getAdminThreshold(stub)
-	if err != nil {
-		return err
-	}
-	if threshold == 0 {
-		return nil
-	}
+// func (broker *Broker) checkReceiptMultiSigns(stub shim.ChaincodeStubInterface, srcFullID, dstFullID string, index uint64, typ uint64, result [][]byte, txStatus uint64, multiSignatures [][]byte) error {
+// 	threshold, err := broker.getAdminThreshold(stub)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	if threshold == 0 {
+// 		return nil
+// 	}
 
-	var funcPacked, packed []byte
+// 	var funcPacked, packed []byte
 
-	packed = append(packed, []byte(srcFullID)...)
-	packed = append(packed, []byte(dstFullID)...)
-	packed = append(packed, uint64ToBytesInBigEndian(index)...)
-	packed = append(packed, uint64ToBytesInBigEndian(typ)...)
+// 	packed = append(packed, []byte(srcFullID)...)
+// 	packed = append(packed, []byte(dstFullID)...)
+// 	packed = append(packed, uint64ToBytesInBigEndian(index)...)
+// 	packed = append(packed, uint64ToBytesInBigEndian(typ)...)
 
-	if typ == 0 && txStatus == 3 {
-		outServicePair := genServicePair(srcFullID, dstFullID)
-		messages, err := broker.getOutMessages(stub)
-		if err != nil {
-			return err
-		}
-		_, ok := messages[outServicePair]
-		if !ok {
-			messages[outServicePair] = make(map[uint64]Event)
-		}
-		callFunc := messages[outServicePair][index].CallFunc
-		funcPacked = append(funcPacked, []byte(callFunc.Func)...)
-		for _, arg := range callFunc.Args {
-			funcPacked = append(funcPacked, arg...)
-		}
-	} else {
-		for _, res := range result {
-			funcPacked = append(funcPacked, res...)
-		}
-	}
-	packed = append(packed, crypto.Keccak256(funcPacked)...)
-	packed = append(packed, uint64ToBytesInBigEndian(txStatus)...)
+// 	if typ == 0 && txStatus == 3 {
+// 		outServicePair := genServicePair(srcFullID, dstFullID)
+// 		messages, err := broker.getOutMessages(stub)
+// 		if err != nil {
+// 			return err
+// 		}
+// 		_, ok := messages[outServicePair]
+// 		if !ok {
+// 			messages[outServicePair] = make(map[uint64]Event)
+// 		}
+// 		callFunc := messages[outServicePair][index].CallFunc
+// 		funcPacked = append(funcPacked, []byte(callFunc.Func)...)
+// 		for _, arg := range callFunc.Args {
+// 			funcPacked = append(funcPacked, arg...)
+// 		}
+// 	} else {
+// 		for _, res := range result {
+// 			funcPacked = append(funcPacked, res...)
+// 		}
+// 	}
+// 	packed = append(packed, crypto.Keccak256(funcPacked)...)
+// 	packed = append(packed, uint64ToBytesInBigEndian(txStatus)...)
 
-	hash := crypto.Keccak256(packed)
+// 	hash := crypto.Keccak256(packed)
 
-	if broker.checkMultiSigns(stub, hash, multiSignatures) {
-		return fmt.Errorf("verify multi signatures failed")
-	}
+// 	if broker.checkMultiSigns(stub, hash, multiSignatures) {
+// 		return fmt.Errorf("verify multi signatures failed")
+// 	}
 
-	return nil
-}
+// 	return nil
+// }
 
 func (broker *Broker) checkService(stub shim.ChaincodeStubInterface, remoteService, destAddr string) error {
 	threshold, err := broker.getValThreshold(stub)

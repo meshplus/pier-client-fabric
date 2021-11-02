@@ -241,7 +241,7 @@ func (c *Client) getProof(response channel.Response) ([]byte, error) {
 func (c *Client) Stop() error {
 	c.ticker.Stop()
 	c.done <- true
-	return c.consumer.Shutdown()
+	return nil
 }
 
 func (c *Client) Name() string {
