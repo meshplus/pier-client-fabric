@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/cloudflare/cfssl/log"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/meshplus/bitxhub-model/pb"
 )
 
@@ -52,8 +53,17 @@ func (ev *Event) encryptPayload() ([]byte, error) {
 		return nil, err
 	}
 
+	var packed []byte
+	packed = append(packed, []byte(ev.CallFunc.Func)...)
+	for _, arg := range ev.CallFunc.Args {
+		packed = append(packed, arg...)
+	}
+	hash := crypto.Keccak256(packed)
+
 	ibtppd := &pb.Payload{
-		Content: data,
+		Encrypted: ev.Encrypt,
+		Content:   data,
+		Hash:      hash,
 	}
 	return ibtppd.Marshal()
 }

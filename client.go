@@ -143,7 +143,6 @@ func (c *Client) polling() {
 				continue
 			}
 			for servicePair, index := range outMeta {
-				logger.Info(servicePair)
 				srcChainServiceID, dstChainServiceID, err := parseServicePair(servicePair)
 				if err != nil {
 					logger.Error("Polling out invalid service pair",
@@ -263,7 +262,7 @@ func (c *Client) SubmitIBTP(from string, index uint64, serviceID string, ibtpTyp
 	if err != nil {
 		ret.Status = false
 		ret.Message = fmt.Sprintf("invoke interchain foribtp to call %s: %w", content.Func, err)
-		return ret, fmt.Errorf("invoke interchain for ibtp to call %s: %w", content.Func, err)
+		return ret, nil
 	}
 	ret.Status = resp.OK
 	ret.Message = resp.Message
@@ -278,7 +277,7 @@ func (c *Client) SubmitReceipt(to string, index uint64, serviceID string, ibtpTy
 	if err != nil {
 		ret.Status = false
 		ret.Message = fmt.Sprintf("invoke receipt for ibtp to call: %w", err)
-		return ret, fmt.Errorf("invoke receipt for ibtp to call: %w", err)
+		return ret, nil
 	}
 	ret.Status = resp.OK
 	ret.Message = resp.Message
@@ -509,7 +508,7 @@ func (c *Client) GetReceiptMessage(servicePair string, idx uint64) (*pb.IBTP, er
 
 func (c *Client) InvokeIndexUpdate(from string, index uint64, serviceId string, category pb.IBTP_Category) (*channel.Response, *Response, error) {
 	reqType := strconv.FormatUint(uint64(category), 10)
-	args := util.ToChaincodeArgs(from, strconv.FormatUint(index, 10), serviceId, reqType)
+	args := util.ToChaincodeArgs(from, serviceId, strconv.FormatUint(index, 10), reqType)
 	request := channel.Request{
 		ChaincodeID: c.meta.CCID,
 		Fcn:         InvokeIndexUpdateMethod,

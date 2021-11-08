@@ -410,3 +410,12 @@ func (broker *Broker) getValidatorList(stub shim.ChaincodeStubInterface) ([]stri
 	}
 	return vList, nil
 }
+
+func (broker *Broker) setValidatorList(stub shim.ChaincodeStubInterface, list []string) error {
+	listBytes, err := json.Marshal(list)
+	if err != nil {
+		return err
+	}
+
+	return stub.PutState(validatorList, listBytes)
+}

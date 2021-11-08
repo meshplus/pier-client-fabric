@@ -213,7 +213,9 @@ func (broker *Broker) initMap(stub shim.ChaincodeStubInterface) error {
 	remoteWhite := make(map[string][]string)
 	locallProposal := make(map[string]proposal)
 	localWhiteByte, err := json.Marshal(localWhite)
-	initoutMessages := make(map[string](map[uint64]Event))
+	initOutMessages := make(map[string](map[uint64]Event))
+	initReceiptMessage := make(map[string](map[uint64]pb.Response))
+	var validators []string
 	if err != nil {
 		return err
 	}
@@ -258,7 +260,15 @@ func (broker *Broker) initMap(stub shim.ChaincodeStubInterface) error {
 		return err
 	}
 
-	if err := broker.setOutMessages(stub, initoutMessages); err != nil {
+	if err := broker.setOutMessages(stub, initOutMessages); err != nil {
+		return err
+	}
+
+	if err := broker.setReceiptMessages(stub, initReceiptMessage); err != nil {
+		return err
+	}
+
+	if err := broker.setValidatorList(stub, validators); err != nil {
 		return err
 	}
 
@@ -597,7 +607,7 @@ func (broker *Broker) getChainId(stub shim.ChaincodeStubInterface) pb.Response {
 		return shim.Error(err.Error())
 	}
 
-	return successResponse([]byte(fmt.Sprintf("%s-%s", bxhId, appchainId)))
+	return shim.Success([]byte(fmt.Sprintf("%s-%s", bxhId, appchainId)))
 }
 func (broker *Broker) genFullServiceID(stub shim.ChaincodeStubInterface, serviceId string) (string, error) {
 	bxhId, err := stub.GetState(bxhID)
@@ -619,8 +629,8 @@ func genServicePair(from, to string) string {
 }
 
 func (broker *Broker) invokeInterchain(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	if len(args) != 8 {
-		return errorResponse("incorrect number of arguments, expecting 8")
+	if len(args) != 9 {
+		return errorResponse("incorrect number of arguments, expecting 9")
 	}
 
 	srcFullID := args[0]
@@ -632,7 +642,7 @@ func (broker *Broker) invokeInterchain(stub shim.ChaincodeStubInterface, args []
 	destAddr := getKey(splitedCID[0], splitedCID[1])
 	index, err := strconv.ParseUint(args[2], 10, 64)
 	if err != nil {
-		return errorResponse(err.Error())
+		return errorResponse(fmt.Sprintf("invoke interchain parse index error: %v", err.Error()))
 	}
 	// typ, err := strconv.ParseUint(args[3], 10, 64)
 	// if err != nil {
@@ -645,16 +655,16 @@ func (broker *Broker) invokeInterchain(stub shim.ChaincodeStubInterface, args []
 	}
 	txStatus, err := strconv.ParseUint(args[6], 10, 64)
 	if err != nil {
-		return errorResponse(err.Error())
+		return errorResponse(fmt.Sprintf("invoke interchain parse txStatus error: %v", err.Error()))
 	}
 	var signatures [][]byte
 	if err := json.Unmarshal([]byte(args[7]), &signatures); err != nil {
 		return errorResponse(fmt.Sprintf("unmarshal signatures failed for %s", args[7]))
 	}
 	// isEncrypt, err := strconv.ParseUint(args[8], 10, 64)
-	if err != nil {
-		return errorResponse(err.Error())
-	}
+	// if err != nil {
+	// 	return errorResponse(err.Error())
+	// }
 
 	dstFullID, err := broker.genFullServiceID(stub, destAddr)
 	if err != nil {
@@ -714,27 +724,27 @@ func (broker *Broker) invokeInterchain(stub shim.ChaincodeStubInterface, args []
 }
 
 func (broker *Broker) invokeReceipt(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	if len(args) != 6 {
-		return errorResponse("incorrect number of arguments, expecting 6")
+	if len(args) != 7 {
+		return errorResponse("incorrect number of arguments, expecting 7")
 	}
 
 	srcAddr := args[0]
 	dstFullID := args[1]
 	index, err := strconv.ParseUint(args[2], 10, 64)
 	if err != nil {
-		return errorResponse(err.Error())
+		return errorResponse(fmt.Sprintf("invoke receipt parse index error: %v", err.Error()))
 	}
-	typ, err := strconv.ParseUint(args[3], 10, 64)
-	if err != nil {
-		return errorResponse(err.Error())
-	}
+	// typ, err := strconv.ParseUint(args[3], 10, 64)
+	// if err != nil {
+	// 	return errorResponse(fmt.Sprintf("invoke receipt parse typ error: %v", err.Error()))
+	// }
 	var result [][]byte
 	if err := json.Unmarshal([]byte(args[4]), &result); err != nil {
 		return errorResponse(err.Error())
 	}
 	txStatus, err := strconv.ParseUint(args[5], 10, 64)
 	if err != nil {
-		return errorResponse(err.Error())
+		return errorResponse(fmt.Sprintf("invoke receipt parse txStatus error: %v", err.Error()))
 	}
 	var signatures [][]byte
 	if err := json.Unmarshal([]byte(args[6]), &signatures); err != nil {
@@ -746,22 +756,22 @@ func (broker *Broker) invokeReceipt(stub shim.ChaincodeStubInterface, args []str
 		return errorResponse(err.Error())
 	}
 	isRollback := false
-	validators, err := broker.getValidatorList(stub)
-	if err != nil {
-		return errorResponse(err.Error())
+	// validators, err := broker.getValidatorList(stub)
+	// if err != nil {
+	// 	return errorResponse(err.Error())
+	// }
+	// if len(validators) == 0 {
+	// 	if typ != 0 && typ != 1 {
+	// 		return errorResponse(fmt.Sprintf("IBTP type is not correct in direct mode"))
+	// 	}
+	// 	if typ == 2 {
+	// 		isRollback = true
+	// 	}
+	// } else {
+	if txStatus != 0 && txStatus != 3 {
+		isRollback = true
 	}
-	if len(validators) == 0 {
-		if typ != 0 && typ != 1 {
-			return errorResponse(fmt.Sprintf("IBTP type is not correct in direct mode"))
-		}
-		if typ == 2 {
-			isRollback = true
-		}
-	} else {
-		if txStatus != 0 && txStatus != 1 {
-			isRollback = true
-		}
-	}
+	// }
 
 	err = broker.updateIndex(stub, srcFullID, dstFullID, index, 1)
 	if err != nil {
@@ -781,16 +791,22 @@ func (broker *Broker) invokeReceipt(stub shim.ChaincodeStubInterface, args []str
 	if !ok {
 		messages[outServicePair] = make(map[uint64]Event)
 	}
-	invokeFunc := messages[outServicePair][index].CallBack
-	funcArgs := invokeFunc.Args
+	var funcArgs [][]byte
 	if isRollback {
-		invokeFunc = messages[outServicePair][index].RollBack
+		invokeFunc := messages[outServicePair][index].RollBack
+		funcArgs = append(funcArgs, []byte(invokeFunc.Func))
+		funcArgs = append(funcArgs, invokeFunc.Args...)
+	} else {
+		invokeFunc := messages[outServicePair][index].CallBack
+		funcArgs = append(funcArgs, []byte(invokeFunc.Func))
+		funcArgs = append(funcArgs, invokeFunc.Args...)
 		funcArgs = append(funcArgs, result...)
 	}
 
-	splitedCID := strings.Split(invokeFunc.Func, delimiter)
+	cid := strings.Split(messages[outServicePair][index].SrcFullID, ":")
+	splitedCID := strings.Split(cid[2], delimiter)
 	if len(splitedCID) != 2 {
-		return errorResponse(fmt.Sprintf("Target chaincode id %s is not valid", invokeFunc.Func))
+		return errorResponse(fmt.Sprintf("Target chaincode id %s is not valid", splitedCID[1]))
 	}
 	response := stub.InvokeChaincode(splitedCID[1], funcArgs, splitedCID[0])
 
@@ -877,10 +893,10 @@ func (broker *Broker) invokeReceipt(stub shim.ChaincodeStubInterface, args []str
 // }
 
 func (broker *Broker) checkService(stub shim.ChaincodeStubInterface, remoteService, destAddr string) error {
-	threshold, err := broker.getValThreshold(stub)
-	if err != nil {
-		return err
-	}
+	// threshold, err := broker.getValThreshold(stub)
+	// if err != nil {
+	// 	return err
+	// }
 
 	localWhite, err := broker.getLocalWhiteList(stub)
 	if err != nil {
@@ -890,9 +906,9 @@ func (broker *Broker) checkService(stub shim.ChaincodeStubInterface, remoteServi
 		return fmt.Errorf("dest address is not in local white list")
 	}
 
-	if threshold == 0 {
-		// TODO: DIRECT MODE
-	}
+	// if threshold == 0 {
+	// 	// TODO: DIRECT MODE
+	// }
 
 	return nil
 }

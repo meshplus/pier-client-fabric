@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"strconv"
 
 	"github.com/hyperledger/fabric/core/chaincode/shim"
@@ -25,7 +26,7 @@ func (broker *Broker) getOutMessage(stub shim.ChaincodeStubInterface, args []str
 	servicePair := args[0]
 	index, err := strconv.ParseUint(args[1], 10, 64)
 	if err != nil {
-		return shim.Error(err.Error())
+		return shim.Error(fmt.Sprintf("getOutMessage parse index error: %v", err.Error()))
 	}
 	messages, err := broker.getOutMessages(stub)
 	if err != nil {
@@ -54,7 +55,7 @@ func (broker *Broker) getInMessage(stub shim.ChaincodeStubInterface, args []stri
 	inServicePair := args[0]
 	index, err := strconv.ParseUint(args[1], 10, 64)
 	if err != nil {
-		return shim.Error(err.Error())
+		return shim.Error(fmt.Sprintf("getInMessage parse index error: %v", err.Error()))
 	}
 	receipts, err := broker.getReceiptMessages(stub)
 	if err != nil {
