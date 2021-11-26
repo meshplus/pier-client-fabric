@@ -141,6 +141,11 @@ func (broker *Broker) EmitInterchainEvent(stub shim.ChaincodeStubInterface, args
 	if len(args) != 8 {
 		return shim.Error("incorrect number of arguments, expecting 8")
 	}
+	if len(args[0]) == 0 || len(args[1]) == 0{
+		// args[0]: destination appchain id
+		// args[1]: destination contract address
+		return shim.Error("incorrect nil destination appchain id or destination contract address")
+	}
 
 	destChainID := args[0]
 	outMeta, err := broker.getMap(stub, outterMeta)
