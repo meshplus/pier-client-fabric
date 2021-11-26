@@ -141,6 +141,11 @@ func (broker *Broker) EmitInterchainEvent(stub shim.ChaincodeStubInterface, args
 	if len(args) != 8 {
 		return shim.Error("incorrect number of arguments, expecting 8")
 	}
+	if len(args[0]) == 0 || len(args[1]) == 0{
+		// args[0]: destination appchain id
+		// args[1]: destination contract address
+		return shim.Error("incorrect nil destination appchain id or destination contract address")
+	}
 
 	destChainID := args[0]
 	outMeta, err := broker.getMap(stub, outterMeta)
@@ -222,6 +227,9 @@ func (broker *Broker) register(stub shim.ChaincodeStubInterface) pb.Response {
 
 // 通过chaincode自带的CID库可以验证调用者的相关信息
 func (broker *Broker) audit(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	if len(args) != 3 {
+		return errorResponse("incorrect number of arguments, expecting 3")
+	}
 	channel := args[0]
 	chaincodeName := args[1]
 	status := args[2]
