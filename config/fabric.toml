@@ -5,6 +5,7 @@ channel_id = "mychannel"
 org = "org2"
 timeout_height = 30
 chain_id = "3"
+dynamic_validators = false
 
 [[services]]
 id = "mychannel&transfer"

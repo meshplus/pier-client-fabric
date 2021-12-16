@@ -16,13 +16,14 @@ type Config struct {
 	Services []Service `mapstructure:"services" json:"services"`
 }
 type Fabric struct {
-	Name          string `toml:"name" json:"name"`
-	Username      string `toml:"username" json:"username"`
-	CCID          string `toml:"ccid" json:"ccid"`
-	ChannelId     string `mapstructure:"channel_id" toml:"channel_id" json:"channel_id"`
-	Org           string `toml:"org" json:"org"`
-	ServerPort    string `toml:"server_port" json:"server_port"`
-	TimeoutHeight int64  `mapstructure:"timeout_height" json:"timeout_height"`
+	Name              string `toml:"name" json:"name"`
+	Username          string `toml:"username" json:"username"`
+	CCID              string `toml:"ccid" json:"ccid"`
+	ChannelId         string `mapstructure:"channel_id" toml:"channel_id" json:"channel_id"`
+	Org               string `toml:"org" json:"org"`
+	ServerPort        string `toml:"server_port" json:"server_port"`
+	TimeoutHeight     int64  `mapstructure:"timeout_height" json:"timeout_height"`
+	DynamicValidators bool   `mapstructure:"dynamic_validators" json:"dynamic_validators"`
 }
 
 type Service struct {
@@ -34,12 +35,13 @@ type Service struct {
 func DefaultConfig() *Config {
 	return &Config{
 		Fabric: Fabric{
-			Name:          "fabric",
-			Username:      "Admin",
-			CCID:          "broker",
-			ChannelId:     "mychannel",
-			Org:           "org2",
-			TimeoutHeight: 30,
+			Name:              "fabric",
+			Username:          "Admin",
+			CCID:              "broker",
+			ChannelId:         "mychannel",
+			Org:               "org2",
+			TimeoutHeight:     30,
+			DynamicValidators: false,
 		},
 		Services: nil,
 	}
