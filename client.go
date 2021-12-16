@@ -57,6 +57,11 @@ type ContractMeta struct {
 	ORG         string `json:"org"`
 }
 
+type DynamicProof struct {
+	Proof  []byte `json:"proof"`
+	height uint64 `json:"height"`
+}
+
 type Client struct {
 	meta          *ContractMeta
 	consumer      *Consumer
@@ -213,10 +218,22 @@ func (c *Client) getProof(response channel.Response) ([]byte, error) {
 		if err := proto.Unmarshal(t.TransactionEnvelope.Payload, pd); err != nil {
 			return nil, err
 		}
-
 		pt := &peer.Transaction{}
 		if err := proto.Unmarshal(pd.Data, pt); err != nil {
 			return nil, err
+		}
+		if c.config.Fabric.DynamicValidators {
+			block, err := l.QueryBlockByTxID(response.TransactionID)
+			if err != nil {
+				return nil, err
+			}
+			number := block.GetHeader().Number
+			dynamicProof := &DynamicProof{
+				Proof:  pt.Actions[0].Payload,
+				height: number,
+			}
+			dynamicProofBytes, _ := json.Marshal(dynamicProof)
+			return dynamicProofBytes, nil
 		}
 
 		return pt.Actions[0].Payload, nil
