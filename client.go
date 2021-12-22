@@ -283,14 +283,16 @@ func (c *Client) SubmitIBTP(ibtp *pb.IBTP) (*pb.SubmitIBTPResponse, error) {
 	} else {
 		res, resp, err := c.InvokeInterchain(ibtp.From, ibtp.Index, content.DstContractId, ibtp.Category(), bizData)
 		if err != nil {
-			return nil, fmt.Errorf("invoke interchain for ibtp %s to call %s: %w", ibtp.ID(), content.Func, err)
+			ret.Message = fmt.Sprintf("invoke interchain foribtp to call %s: %w", content.Func, err)
+			ret.Status = false
 		}
 
-		ret.Status = resp.OK
-		ret.Message = resp.Message
-
-		// if there is callback function, parse returned value
-		result = util.ToChaincodeArgs(strings.Split(string(resp.Data), ",")...)
+		if resp != nil {
+			ret.Status = resp.OK
+			ret.Message = resp.Message
+			// if there is callback function, parse returned value
+			result = util.ToChaincodeArgs(strings.Split(string(resp.Data), ",")...)
+		}
 		chResp = res
 	}
 
@@ -345,7 +347,7 @@ func (c *Client) InvokeInterchain(from string, index uint64, destAddr string, ca
 	}
 
 	if err != nil {
-		return nil, nil, err
+		return &res, nil, err
 	}
 
 	logger.Info("response", "cc status", strconv.Itoa(int(res.ChaincodeStatus)), "payload", string(res.Payload))
