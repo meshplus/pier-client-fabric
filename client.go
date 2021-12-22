@@ -283,8 +283,12 @@ func (c *Client) SubmitIBTP(ibtp *pb.IBTP) (*pb.SubmitIBTPResponse, error) {
 	} else {
 		res, resp, err := c.InvokeInterchain(ibtp.From, ibtp.Index, content.DstContractId, ibtp.Category(), bizData)
 		if err != nil {
-			ret.Message = fmt.Sprintf("invoke interchain foribtp to call %s: %w", content.Func, err)
+			res, _, err = c.InvokeIndexUpdate(ibtp.From, ibtp.Index, ibtp.Category())
+			ret.Message = fmt.Sprintf("invoke interchain for ibtp to call %s: %w", content.Func, err)
 			ret.Status = false
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		if resp != nil {
