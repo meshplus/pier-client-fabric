@@ -62,6 +62,7 @@ type Client struct {
 	consumer      *Consumer
 	eventC        chan *pb.IBTP
 	appchainID    string
+	bitxhubID     string
 	name          string
 	serviceMeta   map[string]*pb.Interchain
 	ticker        *time.Ticker
@@ -124,6 +125,8 @@ func (c *Client) Initialize(configPath string, extra []byte) error {
 	c.done = done
 	c.timeoutHeight = fabricConfig.TimeoutHeight
 	c.config = config
+	c.appchainID = ""
+	c.bitxhubID = ""
 	return nil
 }
 
@@ -258,7 +261,7 @@ func (c *Client) GetIBTPCh() chan *pb.IBTP {
 func (c *Client) SubmitIBTP(from string, index uint64, serviceID string, ibtpType pb.IBTP_Type, content *pb.Content, proof *pb.BxhProof, isEncrypted bool) (*pb.SubmitIBTPResponse, error) {
 	ret := &pb.SubmitIBTPResponse{Status: true}
 
-	res, resp, err := c.InvokeInterchain(from, index, serviceID, uint64(ibtpType), content.Func, content.Args, uint64(proof.TxStatus), proof.MultiSign, isEncrypted)
+	_, resp, err := c.InvokeInterchain(from, index, serviceID, uint64(ibtpType), content.Func, content.Args, uint64(proof.TxStatus), proof.MultiSign, isEncrypted)
 	if err != nil {
 		ret.Status = false
 		ret.Message = fmt.Sprintf("invoke interchain foribtp to call %s: %w", content.Func, err)
@@ -267,17 +270,17 @@ func (c *Client) SubmitIBTP(from string, index uint64, serviceID string, ibtpTyp
 	ret.Status = resp.OK
 	ret.Message = resp.Message
 
-	results := strings.Split(string(resp.Data), ",")
-	result := util.ToChaincodeArgs(results...)
-
-	receiptProof, err := c.getProof(*res)
-	if err != nil {
-		return nil, err
+	if c.bitxhubID == "" || c.appchainID == "" {
+		c.bitxhubID, c.appchainID, err = c.GetChainID()
+		if err != nil {
+			ret.Status = false
+			ret.Message = fmt.Sprintf("get id err: %s", err)
+			return ret, nil
+		}
 	}
-	ibtp, err := c.generateReceipt(from, serviceID, index, result[1:], receiptProof, true, isEncrypted)
-	if err != nil {
-		return nil, err
-	}
+	destFullID := c.bitxhubID + ":" + c.appchainID + ":" + serviceID
+	servicePair := from + "-" + destFullID
+	ibtp, err := c.GetReceiptMessage(servicePair, index)
 	ret.Result = ibtp
 
 	return ret, nil
