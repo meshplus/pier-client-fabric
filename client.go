@@ -511,7 +511,7 @@ func (c *Client) GetInMeta() (map[string]uint64, error) {
 	}
 
 	var response channel.Response
-	response, err := c.consumer.ChannelClient.Execute(request)
+	response, err := c.consumer.ChannelClient.Query(request)
 	if err != nil {
 		return nil, err
 	}
@@ -526,7 +526,7 @@ func (c *Client) GetOutMeta() (map[string]uint64, error) {
 	}
 
 	var response channel.Response
-	response, err := c.consumer.ChannelClient.Execute(request)
+	response, err := c.consumer.ChannelClient.Query(request)
 	if err != nil {
 		return nil, err
 	}
@@ -541,7 +541,7 @@ func (c Client) GetCallbackMeta() (map[string]uint64, error) {
 	}
 
 	var response channel.Response
-	response, err := c.consumer.ChannelClient.Execute(request)
+	response, err := c.consumer.ChannelClient.Query(request)
 	if err != nil {
 		return nil, err
 	}
@@ -606,7 +606,7 @@ func (c *Client) GetDstRollbackMeta() (map[string]uint64, error) {
 	}
 
 	var response channel.Response
-	response, err := c.consumer.ChannelClient.Execute(request)
+	response, err := c.consumer.ChannelClient.Query(request)
 	if err != nil {
 		return nil, err
 	}
@@ -621,7 +621,7 @@ func (c *Client) GetServices() ([]string, error) {
 	}
 
 	var response channel.Response
-	response, err := c.consumer.ChannelClient.Execute(request)
+	response, err := c.consumer.ChannelClient.Query(request)
 	if err != nil {
 		return nil, err
 	}
@@ -644,7 +644,7 @@ func (c *Client) GetChainID() (string, string, error) {
 		Fcn:         GetChainId,
 	}
 
-	response, err := c.consumer.ChannelClient.Execute(request)
+	response, err := c.consumer.ChannelClient.Query(request)
 	if err != nil || response.Payload == nil {
 		return "", "", err
 	}
