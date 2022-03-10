@@ -139,6 +139,24 @@ func (c *Client) polling() {
 			}
 
 			var response channel.Response
+			response, err = c.consumer.ChannelClient.Query(request)
+			if err != nil {
+				logger.Error("Polling events from contract", "error", err.Error())
+				continue
+			}
+			if response.Payload == nil {
+				continue
+			}
+
+			queryEvs := make([]*Event, 0)
+			if err := json.Unmarshal(response.Payload, &queryEvs); err != nil {
+				logger.Error("Unmarshal response payload", "error", err.Error())
+				continue
+			}
+			if len(queryEvs) == 0 {
+				continue
+			}
+
 			response, err = c.consumer.ChannelClient.Execute(request)
 			if err != nil {
 				logger.Error("Polling events from contract", "error", err.Error())
