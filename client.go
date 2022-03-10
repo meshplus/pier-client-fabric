@@ -62,6 +62,7 @@ type Client struct {
 	consumer      *Consumer
 	eventC        chan *pb.IBTP
 	appchainID    string
+	bitxhubID     string
 	name          string
 	serviceMeta   map[string]*pb.Interchain
 	ticker        *time.Ticker
@@ -124,6 +125,8 @@ func (c *Client) Initialize(configPath string, extra []byte) error {
 	c.done = done
 	c.timeoutHeight = fabricConfig.TimeoutHeight
 	c.config = config
+	c.appchainID = ""
+	c.bitxhubID = ""
 	return nil
 }
 
@@ -139,6 +142,10 @@ func (c *Client) polling() {
 		select {
 		case <-c.ticker.C:
 			outMeta, err := c.GetOutMeta()
+			if err != nil {
+				continue
+			}
+			inMeta, err := c.GetInMeta()
 			if err != nil {
 				continue
 			}
@@ -187,6 +194,53 @@ func (c *Client) polling() {
 
 					c.eventC <- ibtp
 					meta.InterchainCounter[dstChainServiceID]++
+				}
+			}
+			for servicePair, index := range inMeta {
+				srcChainServiceID, dstChainServiceID, err := parseServicePair(servicePair)
+				if err != nil {
+					logger.Error("Polling out invalid service pair",
+						"servicePair", servicePair,
+						"index", index,
+						"error", err.Error())
+					continue
+				}
+				meta, ok := c.serviceMeta[srcChainServiceID]
+				if !ok {
+					meta = &pb.Interchain{
+						ID:                      srcChainServiceID,
+						InterchainCounter:       make(map[string]uint64),
+						ReceiptCounter:          make(map[string]uint64),
+						SourceInterchainCounter: make(map[string]uint64),
+						SourceReceiptCounter:    make(map[string]uint64),
+					}
+					c.serviceMeta[srcChainServiceID] = meta
+					ibtp, err := c.GetReceiptMessage(servicePair, index)
+					if err != nil {
+						logger.Error("Polling out message",
+							"servicePair", servicePair,
+							"index", index,
+							"error", err.Error())
+						continue
+					}
+
+					c.eventC <- ibtp
+					meta.ReceiptCounter[dstChainServiceID] = index
+					continue
+				}
+
+				for i := meta.ReceiptCounter[dstChainServiceID] + 1; i <= index; i++ {
+					ibtp, err := c.GetReceiptMessage(servicePair, i)
+					if err != nil {
+						logger.Error("Polling out message",
+							"servicePair", servicePair,
+							"index", i,
+							"error", err.Error())
+						continue
+					}
+
+					c.eventC <- ibtp
+					meta.ReceiptCounter[dstChainServiceID]++
 				}
 			}
 		case <-c.done:
@@ -266,6 +320,19 @@ func (c *Client) SubmitIBTP(from string, index uint64, serviceID string, ibtpTyp
 	}
 	ret.Status = resp.OK
 	ret.Message = resp.Message
+
+	if c.bitxhubID == "" || c.appchainID == "" {
+		c.bitxhubID, c.appchainID, err = c.GetChainID()
+		if err != nil {
+			ret.Status = false
+			ret.Message = fmt.Sprintf("get id err: %s", err)
+			return ret, nil
+		}
+	}
+	destFullID := c.bitxhubID + ":" + c.appchainID + ":" + serviceID
+	servicePair := from + "-" + destFullID
+	ibtp, err := c.GetReceiptMessage(servicePair, index)
+	ret.Result = ibtp
 
 	return ret, nil
 }
@@ -444,7 +511,7 @@ func (c *Client) GetInMeta() (map[string]uint64, error) {
 	}
 
 	var response channel.Response
-	response, err := c.consumer.ChannelClient.Execute(request)
+	response, err := c.consumer.ChannelClient.Query(request)
 	if err != nil {
 		return nil, err
 	}
@@ -459,7 +526,7 @@ func (c *Client) GetOutMeta() (map[string]uint64, error) {
 	}
 
 	var response channel.Response
-	response, err := c.consumer.ChannelClient.Execute(request)
+	response, err := c.consumer.ChannelClient.Query(request)
 	if err != nil {
 		return nil, err
 	}
@@ -474,7 +541,7 @@ func (c Client) GetCallbackMeta() (map[string]uint64, error) {
 	}
 
 	var response channel.Response
-	response, err := c.consumer.ChannelClient.Execute(request)
+	response, err := c.consumer.ChannelClient.Query(request)
 	if err != nil {
 		return nil, err
 	}
@@ -539,7 +606,7 @@ func (c *Client) GetDstRollbackMeta() (map[string]uint64, error) {
 	}
 
 	var response channel.Response
-	response, err := c.consumer.ChannelClient.Execute(request)
+	response, err := c.consumer.ChannelClient.Query(request)
 	if err != nil {
 		return nil, err
 	}
@@ -554,7 +621,7 @@ func (c *Client) GetServices() ([]string, error) {
 	}
 
 	var response channel.Response
-	response, err := c.consumer.ChannelClient.Execute(request)
+	response, err := c.consumer.ChannelClient.Query(request)
 	if err != nil {
 		return nil, err
 	}
@@ -577,7 +644,7 @@ func (c *Client) GetChainID() (string, string, error) {
 		Fcn:         GetChainId,
 	}
 
-	response, err := c.consumer.ChannelClient.Execute(request)
+	response, err := c.consumer.ChannelClient.Query(request)
 	if err != nil || response.Payload == nil {
 		return "", "", err
 	}

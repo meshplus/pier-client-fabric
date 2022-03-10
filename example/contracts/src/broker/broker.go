@@ -773,7 +773,7 @@ func (broker *Broker) invokeReceipt(stub shim.ChaincodeStubInterface, args []str
 	}
 	// }
 
-	err = broker.updateIndex(stub, srcFullID, dstFullID, index, 1)
+	err = broker.updateIndex(stub, srcFullID, dstFullID, index, txStatus)
 	if err != nil {
 		return errorResponse(err.Error())
 	}
