@@ -1,6 +1,9 @@
 package main
 
 import (
+	"bytes"
+	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -118,12 +121,29 @@ func (t *Transfer) transfer(stub shim.ChaincodeStubInterface, args []string) pb.
 			return shim.Error(err.Error())
 		}
 
-		args := strings.Join([]string{sender, receiver, amountArg, "false"}, ",")
-		argsRb := strings.Join([]string{sender, amountArg}, ",")
-		b := util.ToChaincodeArgs(emitInterchainEventFunc, dstServiceID, "interchainCharge,,interchainRollback", args, "", argsRb)
+		var callArgs, argsRb [][]byte
+		callArgs = append(callArgs, []byte(sender))
+		callArgs = append(callArgs, []byte(receiver))
+		transferAmount := make([]byte, 8)
+		binary.BigEndian.PutUint64(transferAmount, amount)
+		callArgs = append(callArgs, transferAmount[:])
+
+		argsRb = append(argsRb, []byte(sender))
+		argsRb = append(argsRb, transferAmount[:])
+
+		callArgsBytes, err := json.Marshal(callArgs)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		argsRbBytes, err := json.Marshal(argsRb)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+
+		b := util.ToChaincodeArgs(emitInterchainEventFunc, dstServiceID, "interchainCharge", string(callArgsBytes), "", "", "interchainRollback", string(argsRbBytes), strconv.FormatBool(false))
 		response := stub.InvokeChaincode(brokerContractName, b, channelID)
 		if response.Status != shim.OK {
-			return shim.Error(fmt.Errorf("invoke broker chaincode %s", response.Message).Error())
+			return shim.Error(fmt.Errorf("invoke broker chaincode: %d - %s", response.Status, response.Message).Error())
 		}
 
 		return shim.Success(nil)
@@ -172,17 +192,14 @@ func (t *Transfer) interchainCharge(stub shim.ChaincodeStubInterface, args []str
 
 	sender := args[0]
 	receiver := args[1]
-	amountArg := args[2]
+	var amountArg uint64
+	buf := bytes.NewBuffer([]byte(args[2]))
+	binary.Read(buf, binary.BigEndian, &amountArg)
 	isRollback := args[3]
 
 	// check for sender info
 	if sender == "" {
 		return shim.Error("incorrect sender info")
-	}
-
-	amount, err := getAmountArg(amountArg)
-	if err != nil {
-		return shim.Error(fmt.Errorf("get amount from arg: %w", err).Error())
 	}
 
 	balance, err := getUint64(stub, receiver)
@@ -192,9 +209,9 @@ func (t *Transfer) interchainCharge(stub shim.ChaincodeStubInterface, args []str
 
 	// TODO: deal with rollback failure (balance not enough)
 	if isRollback == "true" {
-		balance -= amount
+		balance -= amountArg
 	} else {
-		balance += amount
+		balance += amountArg
 	}
 	err = stub.PutState(receiver, []byte(strconv.FormatUint(balance, 10)))
 	if err != nil {
@@ -210,19 +227,16 @@ func (t *Transfer) interchainRollback(stub shim.ChaincodeStubInterface, args []s
 	}
 
 	name := args[0]
-	amountArg := args[1]
-
-	amount, err := getAmountArg(amountArg)
-	if err != nil {
-		return shim.Error(fmt.Errorf("get amount from arg: %w", err).Error())
-	}
+	var amountArg uint64
+	buf := bytes.NewBuffer([]byte(args[1]))
+	binary.Read(buf, binary.BigEndian, &amountArg)
 
 	balance, err := getUint64(stub, name)
 	if err != nil {
 		return shim.Error(fmt.Errorf("get balancee from %s %w", name, err).Error())
 	}
 
-	balance += amount
+	balance += amountArg
 	err = stub.PutState(name, []byte(strconv.FormatUint(balance, 10)))
 	if err != nil {
 		return shim.Error(err.Error())

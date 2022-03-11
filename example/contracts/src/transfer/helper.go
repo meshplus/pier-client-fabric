@@ -10,7 +10,7 @@ import (
 func getUint64(stub shim.ChaincodeStubInterface, key string) (uint64, error) {
 	value, err := stub.GetState(key)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("amount must be an interger %w", err)
 	}
 
 	ret, err := strconv.ParseUint(string(value), 10, 64)

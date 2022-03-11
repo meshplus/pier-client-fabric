@@ -1,7 +1,9 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/hyperledger/fabric/common/util"
@@ -64,7 +66,20 @@ func (s *DataSwapper) get(stub shim.ChaincodeStubInterface, args []string) pb.Re
 	case 2:
 		// args[0]: destination service id
 		// args[1]: key
-		b := util.ToChaincodeArgs(emitInterchainEventFunc, args[0], "interchainGet,interchainSet,", args[1], args[1], "")
+		var callArgs, argsCb [][]byte
+		callArgs = append(callArgs, []byte(args[1]))
+		argsCb = append(argsCb, []byte(args[1]))
+
+		callArgsBytes, err := json.Marshal(callArgs)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		argsCbBytes, err := json.Marshal(argsCb)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+
+		b := util.ToChaincodeArgs(emitInterchainEventFunc, args[0], "interchainGet", string(callArgsBytes), "interchainSet", string(argsCbBytes), "", "", strconv.FormatBool(false))
 		response := stub.InvokeChaincode(brokerContractName, b, channelID)
 		if response.Status != shim.OK {
 			return shim.Error(fmt.Errorf("invoke broker chaincode %s error: %s", brokerContractName, response.Message).Error())
