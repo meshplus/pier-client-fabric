@@ -14,11 +14,22 @@ const (
 	channelID               = "mychannel"
 	brokerContractName      = "broker"
 	emitInterchainEventFunc = "EmitInterchainEvent"
+	accountWhiteList        = "account-white-list"
 )
 
 type Transfer struct{}
 
+var accountList = []string{"Alice", "Bob"}
+
 func (t *Transfer) Init(stub shim.ChaincodeStubInterface) pb.Response {
+	accountWhiteListM := make(map[string]uint64)
+	for _, account := range accountList {
+		accountWhiteListM[account] = 1
+	}
+	err := putMap(stub, accountWhiteList, accountWhiteListM)
+	if err != nil {
+		return shim.Error(fmt.Sprintf("Initialize account white list fail %s", err.Error()))
+	}
 	return shim.Success(nil)
 }
 
@@ -39,9 +50,39 @@ func (t *Transfer) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		return t.interchainCharge(stub, args)
 	case "interchainRollback":
 		return t.interchainRollback(stub, args)
+	case "addAccount":
+		return t.addAccount(stub, args)
+	case "removeAccount":
+		return t.removeAccount(stub, args)
 	default:
 		return shim.Error("invalid function: " + function + ", args: " + strings.Join(args, ","))
 	}
+}
+
+func (t *Transfer) addAccount(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	accountWhiteListM, err := getMap(stub, accountWhiteList)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	accountWhiteListM[args[0]] = 1
+	err = putMap(stub, accountWhiteList, accountWhiteListM)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	return successResponse([]byte(fmt.Sprintf("set account :%s succcessful", args[0])))
+}
+
+func (t *Transfer) removeAccount(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	accountWhiteM, err := getMap(stub, accountWhiteList)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	delete(accountWhiteM, args[0])
+	err = putMap(stub, accountWhiteList, accountWhiteM)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	return successResponse([]byte(fmt.Sprintf("remove account :%s succcessful", args[0])))
 }
 
 func (t *Transfer) register(stub shim.ChaincodeStubInterface) pb.Response {
@@ -92,6 +133,13 @@ func (t *Transfer) transfer(stub shim.ChaincodeStubInterface, args []string) pb.
 
 		return shim.Success(nil)
 	case 4:
+		accountWhiteM, err := getMap(stub, accountWhiteList)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		if _, ok := accountWhiteM[args[1]]; !ok {
+			return errorResponse("sender account is not allowed to invoke interchain transfer")
+		}
 		// args[0]: destination appchain contract did
 		destContractDID := args[0]
 		sender := args[1]
