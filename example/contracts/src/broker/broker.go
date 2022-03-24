@@ -285,7 +285,7 @@ func (broker *Broker) pollingEvent(stub shim.ChaincodeStubInterface, args []stri
 	return shim.Success(ret)
 }
 
-func (broker *Broker) updateIndex(stub shim.ChaincodeStubInterface, sourceChainMethod, sequenceNum string, isReq bool) error {
+func (broker *Broker) updateIndex(stub shim.ChaincodeStubInterface, sourceChainMethod, sequenceNum string, isReq, isSrcChain bool) error {
 	if isReq {
 		if err := broker.checkIndex(stub, sourceChainMethod, sequenceNum, innerMeta); err != nil {
 			return err
@@ -295,17 +295,33 @@ func (broker *Broker) updateIndex(stub shim.ChaincodeStubInterface, sourceChainM
 			return err
 		}
 	} else {
-		if err := broker.checkIndex(stub, sourceChainMethod, sequenceNum, callbackMeta); err != nil {
-			return err
+		if isSrcChain {
+			if err := broker.checkIndex(stub, sourceChainMethod, sequenceNum, callbackMeta); err != nil {
+				return err
+			}
+
+			idx, err := strconv.ParseUint(sequenceNum, 10, 64)
+			if err != nil {
+				return err
+			}
+			if err := broker.markCallbackCounter(stub, sourceChainMethod, idx); err != nil {
+				return err
+			}
+		} else {
+			idx, err := strconv.ParseUint(sequenceNum, 10, 64)
+			if err != nil {
+				return err
+			}
+			if err := broker.markOuterCounter(stub, sourceChainMethod, idx); err != nil {
+				return err
+			}
+			// persist out message
+			key := broker.outMsgKey(sourceChainMethod, strconv.FormatUint(idx, 10))
+			if err := stub.DelState(key); err != nil {
+				return err
+			}
 		}
 
-		idx, err := strconv.ParseUint(sequenceNum, 10, 64)
-		if err != nil {
-			return err
-		}
-		if err := broker.markCallbackCounter(stub, sourceChainMethod, idx); err != nil {
-			return err
-		}
 	}
 
 	return nil
@@ -323,7 +339,7 @@ func (broker *Broker) invokeIndexUpdate(stub shim.ChaincodeStubInterface, args [
 		return errorResponse(fmt.Sprintf("cannot parse %s to bool", args[3]))
 	}
 
-	if err := broker.updateIndex(stub, sourceChainMethod, sequenceNum, isReq); err != nil {
+	if err := broker.updateIndex(stub, sourceChainMethod, sequenceNum, isReq, true); err != nil {
 		return errorResponse(err.Error())
 	}
 
@@ -342,8 +358,12 @@ func (broker *Broker) invokeInterchain(stub shim.ChaincodeStubInterface, args []
 	if err != nil {
 		return errorResponse(fmt.Sprintf("cannot parse %s to bool", args[3]))
 	}
+	isSrcChain, err := strconv.ParseBool(args[4])
+	if err != nil {
+		return errorResponse(fmt.Sprintf("cannot parse %s to bool", args[3]))
+	}
 
-	if err := broker.updateIndex(stub, srcChainMethod, sequenceNum, isReq); err != nil {
+	if err := broker.updateIndex(stub, srcChainMethod, sequenceNum, isReq, isSrcChain); err != nil {
 		return errorResponse(err.Error())
 	}
 
@@ -353,7 +373,7 @@ func (broker *Broker) invokeInterchain(stub shim.ChaincodeStubInterface, args []
 	}
 
 	callFunc := &CallFunc{}
-	if err := json.Unmarshal([]byte(args[4]), callFunc); err != nil {
+	if err := json.Unmarshal([]byte(args[5]), callFunc); err != nil {
 		return errorResponse(fmt.Sprintf("unmarshal call func failed for %s", args[4]))
 	}
 

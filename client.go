@@ -281,7 +281,7 @@ func (c *Client) SubmitIBTP(ibtp *pb.IBTP) (*pb.SubmitIBTPResponse, error) {
 		}
 		chResp = res
 	} else {
-		res, resp, err := c.InvokeInterchain(ibtp.From, ibtp.Index, content.DstContractId, ibtp.Category(), bizData)
+		res, resp, err := c.InvokeInterchain(ibtp.From, ibtp.Index, content.DstContractId, ibtp.Category(), true, bizData)
 		if err != nil {
 			res, _, err = c.InvokeIndexUpdate(ibtp.From, ibtp.Index, ibtp.Category())
 			ret.Message = fmt.Sprintf("invoke interchain for ibtp to call %s: %w", content.Func, err)
@@ -318,12 +318,16 @@ func (c *Client) SubmitIBTP(ibtp *pb.IBTP) (*pb.SubmitIBTPResponse, error) {
 	return ret, nil
 }
 
-func (c *Client) InvokeInterchain(from string, index uint64, destAddr string, category pb.IBTP_Category, bizCallData []byte) (*channel.Response, *Response, error) {
+func (c *Client) InvokeInterchain(from string, index uint64, destAddr string, category pb.IBTP_Category, isSrcChain bool, bizCallData []byte) (*channel.Response, *Response, error) {
 	req := "true"
 	if category == pb.IBTP_RESPONSE {
 		req = "false"
 	}
-	args := util.ToChaincodeArgs(from, strconv.FormatUint(index, 10), destAddr, req)
+	srcChain := "true"
+	if !isSrcChain {
+		srcChain = "false"
+	}
+	args := util.ToChaincodeArgs(from, strconv.FormatUint(index, 10), destAddr, req, srcChain)
 	args = append(args, bizCallData)
 	request := channel.Request{
 		ChaincodeID: c.meta.CCID,
@@ -487,7 +491,7 @@ func (c *Client) RollbackIBTP(ibtp *pb.IBTP, isSrcChain bool) (*pb.RollbackIBTPR
 	}
 
 	// pb.IBTP_RESPONSE indicates it is to update callback counter
-	_, resp, err := c.InvokeInterchain(ibtp.To, ibtp.Index, content.SrcContractId, pb.IBTP_RESPONSE, bizData)
+	_, resp, err := c.InvokeInterchain(ibtp.To, ibtp.Index, content.SrcContractId, pb.IBTP_RESPONSE, isSrcChain, bizData)
 	if err != nil {
 		return nil, fmt.Errorf("invoke interchain for ibtp %s to call %s: %w", ibtp.ID(), content.Rollback, err)
 	}

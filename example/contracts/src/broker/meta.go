@@ -76,6 +76,16 @@ func (broker *Broker) markInCounter(stub shim.ChaincodeStubInterface, from strin
 	return broker.putMap(stub, innerMeta, inMeta)
 }
 
+func (broker *Broker) markOuterCounter(stub shim.ChaincodeStubInterface, from string, idx uint64) error {
+	outerMeta, err := broker.getMap(stub, outterMeta)
+	if err != nil {
+		return err
+	}
+
+	outerMeta[from] = idx
+	return broker.putMap(stub, outterMeta, outerMeta)
+}
+
 func (broker *Broker) markCallbackCounter(stub shim.ChaincodeStubInterface, from string, index uint64) error {
 	meta, err := broker.getMap(stub, callbackMeta)
 	if err != nil {
