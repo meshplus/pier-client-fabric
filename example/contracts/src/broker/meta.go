@@ -81,8 +81,9 @@ func (broker *Broker) markOuterCounter(stub shim.ChaincodeStubInterface, from st
 	if err != nil {
 		return err
 	}
+	newIdx := idx - 1
 
-	outerMeta[from] = idx
+	outerMeta[from] = newIdx
 	return broker.putMap(stub, outterMeta, outerMeta)
 }
 
