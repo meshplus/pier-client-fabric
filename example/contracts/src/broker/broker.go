@@ -347,8 +347,8 @@ func (broker *Broker) invokeIndexUpdate(stub shim.ChaincodeStubInterface, args [
 }
 
 func (broker *Broker) invokeInterchain(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	if len(args) != 5 {
-		return errorResponse("incorrect number of arguments, expecting 5")
+	if len(args) != 6 {
+		return errorResponse("incorrect number of arguments, expecting 6")
 	}
 
 	srcChainMethod := args[0]
