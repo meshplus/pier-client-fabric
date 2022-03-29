@@ -110,7 +110,7 @@ func (c *Client) Initialize(configPath, appchainID string, extra []byte) error {
 	c.appchainID = appchainID
 	c.name = fabricConfig.Name
 	c.outMeta = m
-	c.ticker = time.NewTicker(2 * time.Second)
+	c.ticker = time.NewTicker(fabricConfig.PollingInterval)
 	c.done = done
 
 	return nil

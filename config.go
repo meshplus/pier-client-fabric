@@ -3,6 +3,7 @@ package main
 import (
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/spf13/viper"
 )
@@ -12,13 +13,14 @@ const (
 )
 
 type Fabric struct {
-	Addr        string `toml:"addr" json:"addr"`
-	Name        string `toml:"name" json:"name"`
-	EventFilter string `mapstructure:"event_filter" toml:"event_filter" json:"event_filter"`
-	Username    string `toml:"username" json:"username"`
-	CCID        string `toml:"ccid" json:"ccid"`
-	ChannelId   string `mapstructure:"channel_id" toml:"channel_id" json:"channel_id"`
-	Org         string `toml:"org" json:"org"`
+	Addr            string        `toml:"addr" json:"addr"`
+	Name            string        `toml:"name" json:"name"`
+	EventFilter     string        `mapstructure:"event_filter" toml:"event_filter" json:"event_filter"`
+	Username        string        `toml:"username" json:"username"`
+	CCID            string        `toml:"ccid" json:"ccid"`
+	ChannelId       string        `mapstructure:"channel_id" toml:"channel_id" json:"channel_id"`
+	Org             string        `toml:"org" json:"org"`
+	PollingInterval time.Duration `mapstructure:"polling_interval" json:"polling_interval"`
 }
 
 func DefaultConfig() *Fabric {
