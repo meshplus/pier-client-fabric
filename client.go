@@ -10,16 +10,13 @@ import (
 
 	"github.com/Rican7/retry"
 	"github.com/Rican7/retry/strategy"
-	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hyperledger/fabric-chaincode-go/shim"
-	"github.com/hyperledger/fabric-protos-go/common"
 	"github.com/hyperledger/fabric-protos-go/peer"
-	"github.com/hyperledger/fabric-sdk-go/pkg/client/channel"
-	"github.com/hyperledger/fabric-sdk-go/pkg/client/ledger"
 	"github.com/hyperledger/fabric-sdk-go/pkg/common/providers/fab"
 	"github.com/hyperledger/fabric/common/util"
 	"github.com/meshplus/bitxhub-model/pb"
+	"github.com/meshplus/pier-client-fabric/channel"
 	"github.com/meshplus/pier/pkg/plugins"
 )
 
@@ -252,42 +249,6 @@ func (c *Client) polling() {
 
 func (c *Client) getProof(response channel.Response) ([]byte, error) {
 	var proof []byte
-	var handle = func(response channel.Response) ([]byte, error) {
-		// query proof from fabric
-		l, err := ledger.New(c.consumer.channelProvider)
-		if err != nil {
-			return nil, err
-		}
-
-		t, err := l.QueryTransaction(response.TransactionID)
-		if err != nil {
-			return nil, err
-		}
-		pd := &common.Payload{}
-		if err := proto.Unmarshal(t.TransactionEnvelope.Payload, pd); err != nil {
-			return nil, err
-		}
-
-		pt := &peer.Transaction{}
-		if err := proto.Unmarshal(pd.Data, pt); err != nil {
-			return nil, err
-		}
-
-		return pt.Actions[0].Payload, nil
-	}
-
-	if err := retry.Retry(func(attempt uint) error {
-		var err error
-		proof, err = handle(response)
-		if err != nil {
-			logger.Error("Can't get proof", "error", err.Error())
-			return err
-		}
-		return nil
-	}, strategy.Wait(2*time.Second)); err != nil {
-		logger.Error("Can't get proof", "error", err.Error())
-	}
-
 	return proof, nil
 }
 
@@ -362,7 +323,7 @@ func (c *Client) InvokeInterchain(srcFullID string, index uint64, destAddr strin
 		return nil, nil, err
 	}
 
-	args := util.ToChaincodeArgs(srcFullID, destAddr, strconv.FormatUint(index, 10), strconv.FormatUint(reqType, 10), callFunc,
+	args := util.ToChaincodeArgs(InvokeInterchainMethod, srcFullID, destAddr, strconv.FormatUint(index, 10), strconv.FormatUint(reqType, 10), callFunc,
 		string(callArgsBytes), strconv.FormatUint(txStatus, 10), string(multiSignBytes), strconv.FormatBool(encrypt))
 
 	request := channel.Request{
@@ -412,7 +373,7 @@ func (c *Client) InvokeReceipt(srcAddr string, dstFullID string, index uint64, r
 		return nil, nil, err
 	}
 
-	args := util.ToChaincodeArgs(srcAddr, dstFullID, strconv.FormatUint(index, 10), strconv.FormatUint(reqType, 10), string(resultBytes), strconv.FormatUint(txStatus, 10), string(multiSignBytes))
+	args := util.ToChaincodeArgs(InvokeReceiptMethod, srcAddr, dstFullID, strconv.FormatUint(index, 10), strconv.FormatUint(reqType, 10), string(resultBytes), strconv.FormatUint(txStatus, 10), string(multiSignBytes))
 
 	request := channel.Request{
 		ChaincodeID: c.meta.CCID,
@@ -452,7 +413,7 @@ func (c *Client) InvokeReceipt(srcAddr string, dstFullID string, index uint64, r
 }
 
 func (c *Client) GetOutMessage(servicePair string, idx uint64) (*pb.IBTP, error) {
-	args := util.ToChaincodeArgs(servicePair, strconv.FormatUint(idx, 10))
+	args := util.ToChaincodeArgs(GetOutMessageMethod, servicePair, strconv.FormatUint(idx, 10))
 	request := channel.Request{
 		ChaincodeID: c.meta.CCID,
 		Fcn:         GetOutMessageMethod,
@@ -476,7 +437,7 @@ func (c *Client) GetInMessage(servicePair string, index uint64) ([][]byte, []byt
 	request := channel.Request{
 		ChaincodeID: c.meta.CCID,
 		Fcn:         GetInMessageMethod,
-		Args:        util.ToChaincodeArgs(servicePair, strconv.FormatUint(index, 10)),
+		Args:        util.ToChaincodeArgs(GetInMessageMethod, servicePair, strconv.FormatUint(index, 10)),
 	}
 
 	var response channel.Response
@@ -575,7 +536,7 @@ func (c *Client) GetReceiptMessage(servicePair string, idx uint64) (*pb.IBTP, er
 
 func (c *Client) InvokeIndexUpdate(from string, index uint64, serviceId string, category pb.IBTP_Category) (*channel.Response, *Response, error) {
 	reqType := strconv.FormatUint(uint64(category), 10)
-	args := util.ToChaincodeArgs(from, serviceId, strconv.FormatUint(index, 10), reqType)
+	args := util.ToChaincodeArgs(InvokeIndexUpdateMethod, from, serviceId, strconv.FormatUint(index, 10), reqType)
 	request := channel.Request{
 		ChaincodeID: c.meta.CCID,
 		Fcn:         InvokeIndexUpdateMethod,
