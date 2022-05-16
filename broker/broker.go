@@ -9,6 +9,7 @@ import (
 
 	"github.com/hyperledger/fabric-chaincode-go/pkg/cid"
 	"github.com/hyperledger/fabric-chaincode-go/shim"
+	"github.com/hyperledger/fabric-chaincode-go/shimtest"
 	pb "github.com/hyperledger/fabric-protos-go/peer"
 )
 
@@ -37,6 +38,16 @@ const (
 	outMessages          = "out-messages"
 	receiptMessages      = "receipt-messages"
 )
+
+var Broker_stub *shimtest.MockStub
+
+func init() {
+	ds := new(DataSwapper)
+	// 获取MockStub对象， 传入名称和链码实体
+	Broker_stub = shimtest.NewMockStub("DataSwapper", ds)
+	Broker_stub.MockInit("1", nil)
+	Broker_stub.MockPeerChaincode("data_swapper", Ds_stub, "mychannel")
+}
 
 var admins []string
 

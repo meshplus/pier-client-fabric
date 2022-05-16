@@ -20,7 +20,6 @@ import (
 	"time"
 
 	"github.com/hyperledger/fabric-chaincode-go/shim"
-	"github.com/hyperledger/fabric-chaincode-go/shimtest"
 	"github.com/hyperledger/fabric-sdk-go/pkg/client/channel/invoke"
 	"github.com/hyperledger/fabric-sdk-go/pkg/client/common/discovery/greylist"
 	"github.com/hyperledger/fabric-sdk-go/pkg/client/common/filter"
@@ -34,14 +33,14 @@ import (
 	"github.com/pkg/errors"
 )
 
-var stub *shimtest.MockStub
-
-func init() {
-	ccb := new(broker.Broker)
-	// 获取MockStub对象， 传入名称和链码实体
-	stub = shimtest.NewMockStub("broker", ccb)
-	stub.MockInit("1", nil)
-}
+//var stub *shimtest.MockStub
+//
+//func init() {
+//	ccb := new(broker.Broker)
+//	// 获取MockStub对象， 传入名称和链码实体
+//	stub = shimtest.NewMockStub("broker", ccb)
+//	stub.MockInit("1", nil)
+//}
 
 // Client enables access to a channel on a Fabric network.
 //
@@ -154,7 +153,7 @@ func addDefaultTimeout(tt fab.TimeoutType) RequestOption {
 //  the proposal responses from peer(s)
 func (cc *Client) InvokeHandler(handler invoke.Handler, request Request, options ...RequestOption) (Response, error) {
 
-	mockInvoke := stub.MockInvoke("1", request.Args)
+	mockInvoke := broker.Broker_stub.MockInvoke("1", request.Args)
 	//return mockInvoke, nil
 	return Response{ChaincodeStatus: shim.OK, Payload: mockInvoke.Payload}, nil
 	//

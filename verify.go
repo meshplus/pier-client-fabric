@@ -10,8 +10,10 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/hyperledger/fabric/common/util"
 	"github.com/meshplus/bitxhub-kit/crypto/asym/ecdsa"
 	"github.com/meshplus/bitxhub-kit/types"
+	"github.com/meshplus/pier-client-fabric/broker"
 )
 
 type response struct {
@@ -44,6 +46,11 @@ func (g *ValidatorServer) Start() error {
 	v1 := g.router.Group("/v1")
 	{
 		v1.POST("verify", g.verifyMultiSign)
+		v1.POST("data_swapper/get", g.ds_get)
+		v1.POST("data_swapper/interchain_get", g.ds_interchain_get)
+		v1.POST("data_swapper/interchain_set", g.ds_interchain_set)
+		v1.POST("broker", g.ds_broker)
+
 	}
 
 	go func() {
@@ -56,6 +63,54 @@ func (g *ValidatorServer) Start() error {
 		<-g.ctx.Done()
 	}()
 	return nil
+}
+
+type MockReq struct {
+	Args []string `json:"args"` //第一个参数为Func
+}
+
+func (g *ValidatorServer) ds_broker(c *gin.Context) {
+	req := &MockReq{}
+	if err := c.ShouldBindJSON(req); err != nil {
+		c.JSON(http.StatusInternalServerError, err)
+	}
+	invoke := broker.Broker_stub.MockInvoke("1", util.ToChaincodeArgs(req.Args...))
+	var r []string
+	err := json.Unmarshal(invoke.Payload, &r)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, err)
+	}
+	c.JSON(http.StatusOK, r)
+}
+
+func (g *ValidatorServer) ds_interchain_set(c *gin.Context) {
+	invoke := broker.Ds_stub.MockInvoke("1", util.ToChaincodeArgs("interchainSet", "testkey", "testvalue"))
+	var r []string
+	err := json.Unmarshal(invoke.Payload, &r)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, err)
+	}
+	c.JSON(http.StatusOK, r)
+}
+
+func (g *ValidatorServer) ds_interchain_get(c *gin.Context) {
+	invoke := broker.Ds_stub.MockInvoke("1", util.ToChaincodeArgs("interchainGet", "testkey"))
+	var r []string
+	err := json.Unmarshal(invoke.Payload, &r)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, err)
+	}
+	c.JSON(http.StatusOK, r)
+}
+
+func (g *ValidatorServer) ds_get(c *gin.Context) {
+	invoke := broker.Ds_stub.MockInvoke("1", util.ToChaincodeArgs("get", "0x111111", "testkey"))
+	var r []string
+	err := json.Unmarshal(invoke.Payload, &r)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, err)
+	}
+	c.JSON(http.StatusOK, r)
 }
 
 func (g *ValidatorServer) verifyMultiSign(c *gin.Context) {
