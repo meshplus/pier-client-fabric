@@ -994,10 +994,3 @@ func generateCallFunc(funcCall, args string) (CallFunc, error) {
 		Args: newArgs,
 	}, nil
 }
-
-func main() {
-	err := shim.Start(new(Broker))
-	if err != nil {
-		fmt.Printf("Error starting chaincode: %s", err)
-	}
-}

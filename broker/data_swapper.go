@@ -25,7 +25,7 @@ func init() {
 	// 获取MockStub对象， 传入名称和链码实体
 	Ds_stub = shimtest.NewMockStub("DataSwapper", ds)
 	Ds_stub.MockInit("1", nil)
-	Broker_stub.MockPeerChaincode("broker", Broker_stub, "mychannel")
+	Ds_stub.MockPeerChaincode("broker", Broker_stub, "mychannel")
 }
 
 type DataSwapper struct{}
@@ -128,11 +128,4 @@ func (s *DataSwapper) interchainGet(stub shim.ChaincodeStubInterface, args []str
 		return shim.Error(err.Error())
 	}
 	return shim.Success(value)
-}
-
-func main() {
-	err := shim.Start(new(DataSwapper))
-	if err != nil {
-		fmt.Printf("Error starting chaincode: %s", err)
-	}
 }

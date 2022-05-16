@@ -2,12 +2,19 @@ package main
 
 import (
 	"fmt"
-	"path/filepath"
 
+	txnmocks "github.com/hyperledger/fabric-sdk-go/pkg/client/common/mocks"
+	"github.com/hyperledger/fabric-sdk-go/pkg/common/providers/context"
 	"github.com/hyperledger/fabric-sdk-go/pkg/common/providers/fab"
-	"github.com/hyperledger/fabric-sdk-go/pkg/core/config"
-	"github.com/hyperledger/fabric-sdk-go/pkg/fabsdk"
+	contextImpl "github.com/hyperledger/fabric-sdk-go/pkg/context"
+	fcmocks "github.com/hyperledger/fabric-sdk-go/pkg/fab/mocks"
+	mspmocks "github.com/hyperledger/fabric-sdk-go/pkg/msp/test/mockmsp"
 	"github.com/meshplus/pier-client-fabric/channel"
+	"github.com/pkg/errors"
+)
+
+const (
+	channelID = "mychannel"
 )
 
 type MessageHandler interface {
@@ -25,15 +32,17 @@ type Consumer struct {
 }
 
 func NewConsumer(configPath string, meta *ContractMeta, msgH MessageHandler, ctx chan bool) (*Consumer, error) {
-	configProvider := config.FromFile(filepath.Join(configPath, "config.yaml"))
-	sdk, err := fabsdk.New(configProvider)
-	if err != nil {
-		return nil, fmt.Errorf("create sdk fail: %s\n", err)
-	}
+	//configProvider := config.FromFile(filepath.Join(configPath, "config.yaml"))
+	//sdk, err := fabsdk.New(configProvider)
+	//if err != nil {
+	//	return nil, fmt.Errorf("create sdk fail: %s\n", err)
+	//}
+	//
+	//channelProvider := sdk.ChannelContext(meta.ChannelID, fabsdk.WithUser(meta.Username), fabsdk.WithOrg(meta.ORG))
+	fabCtx := setupCustomTestContext(txnmocks.NewMockSelectionService(nil, nil), txnmocks.NewMockDiscoveryService(nil), nil)
 
-	channelProvider := sdk.ChannelContext(meta.ChannelID, fabsdk.WithUser(meta.Username), fabsdk.WithOrg(meta.ORG))
-
-	channelClient, err := channel.New(channelProvider)
+	channelContext := createChannelContext(fabCtx, channelID)
+	channelClient, err := channel.New(channelContext)
 	if err != nil {
 		return nil, fmt.Errorf("create channel fabcli fail: %s\n", err.Error())
 	}
@@ -104,3 +113,58 @@ func NewConsumer(configPath string, meta *ContractMeta, msgH MessageHandler, ctx
 //
 //	c.msgH.HandleMessage(deliveries, pt.Actions[0].Payload)
 //}
+
+func setupCustomTestContext(selectionService fab.SelectionService, discoveryService fab.DiscoveryService, orderers []fab.Orderer) context.ClientProvider {
+	user := mspmocks.NewMockSigningIdentity("test", "test")
+	ctx := fcmocks.NewMockContext(user)
+
+	if orderers == nil {
+		orderer := fcmocks.NewMockOrderer("", nil)
+		orderers = []fab.Orderer{orderer}
+	}
+
+	transactor := txnmocks.MockTransactor{
+		Ctx:       ctx,
+		ChannelID: channelID,
+		Orderers:  orderers,
+	}
+
+	testChannelSvc, _ := setupTestChannelService(ctx, orderers)
+
+	mockChService := testChannelSvc.(*fcmocks.MockChannelService)
+	mockChService.SetTransactor(&transactor)
+	mockChService.SetDiscovery(discoveryService)
+	mockChService.SetSelection(selectionService)
+
+	channelProvider := ctx.MockProviderContext.ChannelProvider()
+	channelProvider.(*fcmocks.MockChannelProvider).SetCustomChannelService(testChannelSvc)
+
+	return createClientContext(ctx)
+}
+func setupTestChannelService(ctx context.Client, orderers []fab.Orderer) (fab.ChannelService, error) {
+	chProvider, err := fcmocks.NewMockChannelProvider(ctx)
+	if err != nil {
+		return nil, errors.WithMessage(err, "mock channel provider creation failed")
+	}
+
+	chService, err := chProvider.ChannelService(ctx, channelID)
+	if err != nil {
+		return nil, errors.WithMessage(err, "mock channel service creation failed")
+	}
+
+	return chService, nil
+}
+func createClientContext(client context.Client) context.ClientProvider {
+	return func() (context.Client, error) {
+		return client, nil
+	}
+}
+
+func createChannelContext(clientContext context.ClientProvider, channelID string) context.ChannelProvider {
+
+	channelProvider := func() (context.Channel, error) {
+		return contextImpl.NewChannel(clientContext, channelID)
+	}
+
+	return channelProvider
+}

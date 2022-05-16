@@ -24,7 +24,9 @@ require (
 	github.com/meshplus/bitxhub-kit v1.2.1-0.20210902085548-07f4fa85bfc9
 	github.com/meshplus/bitxhub-model v1.2.1-0.20211015075232-7f8f7caceb7f
 	github.com/meshplus/pier v1.12.1-0.20211026022148-d2419281af6b
+	github.com/pkg/errors v0.9.1
 	github.com/spf13/viper v1.7.1
+	github.com/stretchr/testify v1.7.0
 	github.com/urfave/cli v1.22.1
 )
 
