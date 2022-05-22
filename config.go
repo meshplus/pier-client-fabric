@@ -16,13 +16,9 @@ type Config struct {
 	Services []Service `mapstructure:"services" json:"services"`
 }
 type Fabric struct {
-	Name          string `toml:"name" json:"name"`
-	Username      string `toml:"username" json:"username"`
-	CCID          string `toml:"ccid" json:"ccid"`
-	ChannelId     string `mapstructure:"channel_id" toml:"channel_id" json:"channel_id"`
-	Org           string `toml:"org" json:"org"`
-	ServerPort    string `toml:"server_port" json:"server_port"`
-	TimeoutHeight int64  `mapstructure:"timeout_height" json:"timeout_height"`
+	BxhId      string `toml:"bxh_id" json:"bxh_id" mapstructure:"bxh_id"`
+	AppchainId string `toml:"appchain_id" json:"appchain_id" mapstructure:"appchain_id"`
+	Port       string `toml:"port" json:"port"`
 }
 
 type Service struct {
@@ -34,12 +30,9 @@ type Service struct {
 func DefaultConfig() *Config {
 	return &Config{
 		Fabric: Fabric{
-			Name:          "fabric",
-			Username:      "Admin",
-			CCID:          "broker",
-			ChannelId:     "mychannel",
-			Org:           "org2",
-			TimeoutHeight: 30,
+			BxhId:      "",
+			AppchainId: "",
+			Port:       "",
 		},
 		Services: nil,
 	}

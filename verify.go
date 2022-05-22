@@ -47,9 +47,10 @@ func (g *ValidatorServer) Start() error {
 	{
 		v1.POST("verify", g.verifyMultiSign)
 		v1.POST("data_swapper/get", g.ds_get)
-		v1.POST("data_swapper/interchain_get", g.ds_interchain_get)
-		v1.POST("data_swapper/interchain_set", g.ds_interchain_set)
-		v1.POST("broker", g.ds_broker)
+		//v1.POST("data_swapper/interchain_get", g.ds_interchain_get)
+		//v1.POST("data_swapper/interchain_set", g.ds_interchain_set)
+		v1.POST("broker", g.broker_call)
+		v1.POST("data_swapper", g.ds_call)
 
 	}
 
@@ -69,39 +70,52 @@ type MockReq struct {
 	Args []string `json:"args"` //第一个参数为Func
 }
 
-func (g *ValidatorServer) ds_broker(c *gin.Context) {
+func (g *ValidatorServer) broker_call(c *gin.Context) {
 	req := &MockReq{}
 	if err := c.ShouldBindJSON(req); err != nil {
 		c.JSON(http.StatusInternalServerError, err)
 	}
 	invoke := broker.Broker_stub.MockInvoke("1", util.ToChaincodeArgs(req.Args...))
-	var r []string
-	err := json.Unmarshal(invoke.Payload, &r)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, err)
+
+	if invoke.Status != 200 {
+		c.JSON(http.StatusInternalServerError, invoke.Message)
 	}
-	c.JSON(http.StatusOK, r)
+	c.JSON(http.StatusOK, string(invoke.Payload))
 }
 
-func (g *ValidatorServer) ds_interchain_set(c *gin.Context) {
-	invoke := broker.Ds_stub.MockInvoke("1", util.ToChaincodeArgs("interchainSet", "testkey", "testvalue"))
-	var r []string
-	err := json.Unmarshal(invoke.Payload, &r)
-	if err != nil {
+func (g *ValidatorServer) ds_call(c *gin.Context) {
+	req := &MockReq{}
+	if err := c.ShouldBindJSON(req); err != nil {
 		c.JSON(http.StatusInternalServerError, err)
 	}
-	c.JSON(http.StatusOK, r)
+	invoke := broker.Ds_stub.MockInvoke("1", util.ToChaincodeArgs(req.Args...))
+	//var r string
+	//err := json.Unmarshal(invoke.Payload, &r)
+	if invoke.Status != 200 {
+		c.JSON(http.StatusInternalServerError, invoke.Message)
+	}
+	c.JSON(http.StatusOK, string(invoke.Payload))
 }
 
-func (g *ValidatorServer) ds_interchain_get(c *gin.Context) {
-	invoke := broker.Ds_stub.MockInvoke("1", util.ToChaincodeArgs("interchainGet", "testkey"))
-	var r []string
-	err := json.Unmarshal(invoke.Payload, &r)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, err)
-	}
-	c.JSON(http.StatusOK, r)
-}
+//func (g *ValidatorServer) ds_interchain_set(c *gin.Context) {
+//	invoke := broker.Ds_stub.MockInvoke("1", util.ToChaincodeArgs("interchainSet", "testkey", "testvalue"))
+//	var r []string
+//	err := json.Unmarshal(invoke.Payload, &r)
+//	if err != nil {
+//		c.JSON(http.StatusInternalServerError, err)
+//	}
+//	c.JSON(http.StatusOK, r)
+//}
+//
+//func (g *ValidatorServer) ds_interchain_get(c *gin.Context) {
+//	invoke := broker.Ds_stub.MockInvoke("1", util.ToChaincodeArgs("interchainGet", "testkey"))
+//	var r []string
+//	err := json.Unmarshal(invoke.Payload, &r)
+//	if err != nil {
+//		c.JSON(http.StatusInternalServerError, err)
+//	}
+//	c.JSON(http.StatusOK, r)
+//}
 
 func (g *ValidatorServer) ds_get(c *gin.Context) {
 	invoke := broker.Ds_stub.MockInvoke("1", util.ToChaincodeArgs("get", "0x111111", "testkey"))

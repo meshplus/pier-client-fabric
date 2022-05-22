@@ -42,9 +42,9 @@ const (
 var Broker_stub *shimtest.MockStub
 
 func init() {
-	ds := new(DataSwapper)
+	bs := new(Broker)
 	// 获取MockStub对象， 传入名称和链码实体
-	Broker_stub = shimtest.NewMockStub("DataSwapper", ds)
+	Broker_stub = shimtest.NewMockStub("Broker", bs)
 	Broker_stub.MockInit("1", nil)
 	Broker_stub.MockPeerChaincode("data_swapper", Ds_stub, "mychannel")
 }
@@ -192,10 +192,6 @@ func (broker *Broker) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 }
 
 func (broker *Broker) initialize(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	if onlyAdmin := broker.onlyAdmin(stub); !onlyAdmin {
-		return shim.Error(fmt.Sprintf("caller is not admin"))
-	}
-
 	err := broker.initMap(stub)
 	if err != nil {
 		return shim.Error(err.Error())

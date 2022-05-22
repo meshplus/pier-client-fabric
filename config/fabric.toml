@@ -1,15 +1,4 @@
 [fabric]
-username = "Admin"
-ccid = "broker"
-channel_id = "mychannel"
-org = "org2"
-timeout_height = 30
-chain_id = "3"
-
-[[services]]
-id = "mychannel&transfer"
-name = "transfer"
-
-[[services]]
-id = "mychannel&data_swapper"
-name = "data_swapper"
+bxh_id = "1356"
+appchain_id = "testchain01"
+port = "8081"

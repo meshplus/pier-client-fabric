@@ -8,16 +8,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Rican7/retry"
-	"github.com/Rican7/retry/strategy"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hyperledger/fabric-chaincode-go/shim"
 	"github.com/hyperledger/fabric-protos-go/peer"
 	"github.com/hyperledger/fabric-sdk-go/pkg/common/providers/fab"
 	"github.com/hyperledger/fabric/common/util"
 	"github.com/meshplus/bitxhub-model/pb"
+	"github.com/meshplus/pier-client-fabric/broker"
 	"github.com/meshplus/pier-client-fabric/channel"
 	"github.com/meshplus/pier/pkg/plugins"
+	"github.com/pkg/errors"
 )
 
 var (
@@ -87,12 +87,23 @@ func (c *Client) Initialize(configPath string, extra []byte) error {
 		return fmt.Errorf("unmarshal config for plugin :%w", err)
 	}
 	fabricConfig := config.Fabric
-	contractmeta := &ContractMeta{
-		Username:  fabricConfig.Username,
-		CCID:      fabricConfig.CCID,
-		ChannelID: fabricConfig.ChannelId,
-		ORG:       fabricConfig.Org,
+	c.appchainID = fabricConfig.AppchainId
+	c.bitxhubID = fabricConfig.BxhId
+	invoke := broker.Broker_stub.MockInvoke("1", util.ToChaincodeArgs("initialize", c.bitxhubID, c.appchainID))
+	if invoke.Status == shim.ERROR {
+		return errors.New(invoke.Message)
 	}
+	server, err := NewValidatorServer(fabricConfig.Port)
+	if err != nil {
+		return err
+	}
+
+	//contractmeta := &ContractMeta{
+	//	Username:  fabricConfig.Username,
+	//	CCID:      fabricConfig.CCID,
+	//	ChannelID: fabricConfig.ChannelId,
+	//	ORG:       fabricConfig.Org,
+	//}
 
 	m := make(map[string]*pb.Interchain)
 	// if err := json.Unmarshal(extra, &m); err != nil {
@@ -102,28 +113,30 @@ func (c *Client) Initialize(configPath string, extra []byte) error {
 	// 	m = make(map[string]*pb.Interchain)
 	// }
 
-	mgh, err := newFabricHandler(contractmeta.EventFilter, eventC)
-	if err != nil {
-		return err
-	}
+	//mgh, err := newFabricHandler(contractmeta.EventFilter, eventC)
+	//if err != nil {
+	//	return err
+	//}
+	//
 
-	done := make(chan bool)
-	csm, err := NewConsumer(configPath, contractmeta, mgh, done)
-	if err != nil {
-		return err
-	}
+	//csm, err := NewConsumer(configPath, contractmeta, mgh, done)
+	//if err != nil {
+	//	return err
+	//}
 
-	c.consumer = csm
 	c.eventC = eventC
-	c.meta = contractmeta
-	c.name = fabricConfig.Name
+	c.meta = &ContractMeta{CCID: "1"}
+	c.name = "fabric-mock"
 	c.serviceMeta = m
 	c.ticker = time.NewTicker(2 * time.Second)
+	done := make(chan bool)
 	c.done = done
-	c.timeoutHeight = fabricConfig.TimeoutHeight
-	c.config = config
-	c.appchainID = ""
-	c.bitxhubID = ""
+	c.timeoutHeight = 2
+
+	if err := server.Start(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -273,13 +286,13 @@ func (c *Client) GetIBTPCh() chan *pb.IBTP {
 func (c *Client) SubmitIBTP(from string, index uint64, serviceID string, ibtpType pb.IBTP_Type, content *pb.Content, proof *pb.BxhProof, isEncrypted bool) (*pb.SubmitIBTPResponse, error) {
 	ret := &pb.SubmitIBTPResponse{Status: true}
 
-	_, resp, err := c.InvokeInterchain(from, index, serviceID, uint64(ibtpType), content.Func, content.Args, uint64(proof.TxStatus), proof.MultiSign, isEncrypted)
+	resp, err := c.InvokeInterchain(from, index, serviceID, uint64(ibtpType), content.Func, content.Args, uint64(proof.TxStatus), proof.MultiSign, isEncrypted)
 	if err != nil {
 		ret.Status = false
 		ret.Message = fmt.Sprintf("invoke interchain foribtp to call %s: %w", content.Func, err)
 		return ret, nil
 	}
-	ret.Status = resp.OK
+	ret.Status = (resp.Status == 200)
 	ret.Message = resp.Message
 
 	if c.bitxhubID == "" || c.appchainID == "" {
@@ -301,26 +314,26 @@ func (c *Client) SubmitIBTP(from string, index uint64, serviceID string, ibtpTyp
 func (c *Client) SubmitReceipt(to string, index uint64, serviceID string, ibtpType pb.IBTP_Type, result *pb.Result, proof *pb.BxhProof) (*pb.SubmitIBTPResponse, error) {
 	ret := &pb.SubmitIBTPResponse{Status: true}
 
-	_, resp, err := c.InvokeReceipt(serviceID, to, index, uint64(ibtpType), result.Data, uint64(proof.TxStatus), proof.MultiSign)
+	resp, err := c.InvokeReceipt(serviceID, to, index, uint64(ibtpType), result.Data, uint64(proof.TxStatus), proof.MultiSign)
 	if err != nil {
 		ret.Status = false
 		ret.Message = fmt.Sprintf("invoke receipt for ibtp to call: %w", err)
 		return ret, nil
 	}
-	ret.Status = resp.OK
+	ret.Status = (resp.Status == 200)
 	ret.Message = resp.Message
 
 	return ret, nil
 }
 
-func (c *Client) InvokeInterchain(srcFullID string, index uint64, destAddr string, reqType uint64, callFunc string, callArgs [][]byte, txStatus uint64, multiSign [][]byte, encrypt bool) (*channel.Response, *Response, error) {
+func (c *Client) InvokeInterchain(srcFullID string, index uint64, destAddr string, reqType uint64, callFunc string, callArgs [][]byte, txStatus uint64, multiSign [][]byte, encrypt bool) (*peer.Response, error) {
 	callArgsBytes, err := json.Marshal(callArgs)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	multiSignBytes, err := json.Marshal(multiSign)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	args := util.ToChaincodeArgs(InvokeInterchainMethod, srcFullID, destAddr, strconv.FormatUint(index, 10), strconv.FormatUint(reqType, 10), callFunc,
@@ -332,45 +345,19 @@ func (c *Client) InvokeInterchain(srcFullID string, index uint64, destAddr strin
 		Args:        args,
 	}
 
-	// retry executing
-	var res channel.Response
-	if err := retry.Retry(func(attempt uint) error {
-		res, err = c.consumer.ChannelClient.Execute(request)
-		if err != nil {
-			if strings.Contains(err.Error(), "Chaincode status Code: (500)") {
-				res.ChaincodeStatus = shim.ERROR
-				logger.Error("execute request failed", "err", err.Error())
-				return nil
-			}
-			return fmt.Errorf("execute request: %w", err)
-		}
+	invoke := broker.Broker_stub.MockInvoke("1", request.Args)
 
-		return nil
-	}, strategy.Wait(2*time.Second)); err != nil {
-		logger.Error("Can't send rollback ibtp back to bitxhub", "error", err.Error())
-	}
-
-	if err != nil {
-		return nil, nil, err
-	}
-
-	logger.Info("response", "cc status", strconv.Itoa(int(res.ChaincodeStatus)), "payload", string(res.Payload))
-	response := &Response{}
-	if err := json.Unmarshal(res.Payload, response); err != nil {
-		return nil, nil, err
-	}
-
-	return &res, response, nil
+	return &invoke, nil
 }
 
-func (c *Client) InvokeReceipt(srcAddr string, dstFullID string, index uint64, reqType uint64, result [][]byte, txStatus uint64, multiSign [][]byte) (*channel.Response, *Response, error) {
+func (c *Client) InvokeReceipt(srcAddr string, dstFullID string, index uint64, reqType uint64, result [][]byte, txStatus uint64, multiSign [][]byte) (*peer.Response, error) {
 	resultBytes, err := json.Marshal(result)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	multiSignBytes, err := json.Marshal(multiSign)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	args := util.ToChaincodeArgs(InvokeReceiptMethod, srcAddr, dstFullID, strconv.FormatUint(index, 10), strconv.FormatUint(reqType, 10), string(resultBytes), strconv.FormatUint(txStatus, 10), string(multiSignBytes))
@@ -381,35 +368,10 @@ func (c *Client) InvokeReceipt(srcAddr string, dstFullID string, index uint64, r
 		Args:        args,
 	}
 
-	// retry executing
-	var res channel.Response
-	if err := retry.Retry(func(attempt uint) error {
-		res, err = c.consumer.ChannelClient.Execute(request)
-		if err != nil {
-			if strings.Contains(err.Error(), "Chaincode status Code: (500)") {
-				res.ChaincodeStatus = shim.ERROR
-				logger.Error("execute request failed", "err", err.Error())
-				return nil
-			}
-			return fmt.Errorf("execute request: %w", err)
-		}
+	invoke := broker.Broker_stub.MockInvoke("1", request.Args)
 
-		return nil
-	}, strategy.Wait(2*time.Second)); err != nil {
-		logger.Error("Can't send rollback ibtp back to bitxhub", "error", err.Error())
-	}
+	return &invoke, nil
 
-	if err != nil {
-		return nil, nil, err
-	}
-
-	logger.Info("response", "cc status", strconv.Itoa(int(res.ChaincodeStatus)), "payload", string(res.Payload))
-	response := &Response{}
-	if err := json.Unmarshal(res.Payload, response); err != nil {
-		return nil, nil, err
-	}
-
-	return &res, response, nil
 }
 
 func (c *Client) GetOutMessage(servicePair string, idx uint64) (*pb.IBTP, error) {
@@ -420,17 +382,9 @@ func (c *Client) GetOutMessage(servicePair string, idx uint64) (*pb.IBTP, error)
 		Args:        args,
 	}
 
-	var response channel.Response
-	response, err := c.consumer.ChannelClient.Execute(request)
-	if err != nil {
-		return nil, err
-	}
+	resp := broker.Broker_stub.MockInvoke("1", request.Args)
 
-	proof, err := c.getProof(response)
-	if err != nil {
-		return nil, err
-	}
-	return c.unpackIBTP(&response, pb.IBTP_INTERCHAIN, proof)
+	return c.unpackIBTP(&resp, pb.IBTP_INTERCHAIN, nil)
 }
 
 func (c *Client) GetInMessage(servicePair string, index uint64) ([][]byte, []byte, error) {
@@ -440,74 +394,44 @@ func (c *Client) GetInMessage(servicePair string, index uint64) ([][]byte, []byt
 		Args:        util.ToChaincodeArgs(GetInMessageMethod, servicePair, strconv.FormatUint(index, 10)),
 	}
 
-	var response channel.Response
-	response, err := c.consumer.ChannelClient.Execute(request)
-	if err != nil {
-		return nil, nil, fmt.Errorf("execute req: %w", err)
-	}
-
-	resp := &peer.Response{}
-	if err := json.Unmarshal(response.Payload, resp); err != nil {
-		return nil, nil, err
-	}
-
+	resp := broker.Broker_stub.MockInvoke("1", request.Args)
 	results := []string{"true"}
 	if resp.Status == shim.ERROR {
 		results = []string{"false"}
 	}
 	results = append(results, strings.Split(string(resp.Payload), ",")...)
 
-	proof, err := c.getProof(response)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return util.ToChaincodeArgs(results...), proof, nil
+	return util.ToChaincodeArgs(results...), nil, nil
 }
 
 func (c *Client) GetInMeta() (map[string]uint64, error) {
 	request := channel.Request{
 		ChaincodeID: c.meta.CCID,
-		Fcn:         GetInnerMetaMethod,
+		Args:        util.ToChaincodeArgs(GetInnerMetaMethod),
 	}
 
-	var response channel.Response
-	response, err := c.consumer.ChannelClient.Query(request)
-	if err != nil {
-		return nil, err
-	}
-
-	return c.unpackMap(response)
+	resp := broker.Broker_stub.MockInvoke("1", request.Args)
+	return c.unpackMap(resp)
 }
 
 func (c *Client) GetOutMeta() (map[string]uint64, error) {
 	request := channel.Request{
 		ChaincodeID: c.meta.CCID,
-		Fcn:         GetOutMetaMethod,
+		Args:        util.ToChaincodeArgs(GetOutMetaMethod),
 	}
 
-	var response channel.Response
-	response, err := c.consumer.ChannelClient.Query(request)
-	if err != nil {
-		return nil, err
-	}
-
-	return c.unpackMap(response)
+	resp := broker.Broker_stub.MockInvoke("1", request.Args)
+	return c.unpackMap(resp)
 }
 
 func (c Client) GetCallbackMeta() (map[string]uint64, error) {
 	request := channel.Request{
 		ChaincodeID: c.meta.CCID,
-		Fcn:         GetCallbackMetaMethod,
+		Args:        util.ToChaincodeArgs(GetCallbackMetaMethod),
 	}
 
-	var response channel.Response
-	response, err := c.consumer.ChannelClient.Query(request)
-	if err != nil {
-		return nil, err
-	}
-
-	return c.unpackMap(response)
+	resp := broker.Broker_stub.MockInvoke("1", request.Args)
+	return c.unpackMap(resp)
 }
 
 func (c *Client) CommitCallback(ibtp *pb.IBTP) error {
@@ -534,7 +458,7 @@ func (c *Client) GetReceiptMessage(servicePair string, idx uint64) (*pb.IBTP, er
 	return c.generateReceipt(srcServiceID, dstServiceID, idx, result[1:], proof, status, encrypt)
 }
 
-func (c *Client) InvokeIndexUpdate(from string, index uint64, serviceId string, category pb.IBTP_Category) (*channel.Response, *Response, error) {
+func (c *Client) InvokeIndexUpdate(from string, index uint64, serviceId string, category pb.IBTP_Category) (*peer.Response, error) {
 	reqType := strconv.FormatUint(uint64(category), 10)
 	args := util.ToChaincodeArgs(InvokeIndexUpdateMethod, from, serviceId, strconv.FormatUint(index, 10), reqType)
 	request := channel.Request{
@@ -543,17 +467,9 @@ func (c *Client) InvokeIndexUpdate(from string, index uint64, serviceId string, 
 		Args:        args,
 	}
 
-	res, err := c.consumer.ChannelClient.Execute(request)
-	if err != nil {
-		return nil, nil, err
-	}
+	resp := broker.Broker_stub.MockInvoke("1", request.Args)
 
-	response := &Response{}
-	if err := json.Unmarshal(res.Payload, response); err != nil {
-		return nil, nil, err
-	}
-
-	return &res, response, nil
+	return &resp, nil
 }
 
 func (c *Client) GetSrcRollbackMeta() (map[string]uint64, error) {
@@ -563,35 +479,25 @@ func (c *Client) GetSrcRollbackMeta() (map[string]uint64, error) {
 func (c *Client) GetDstRollbackMeta() (map[string]uint64, error) {
 	request := channel.Request{
 		ChaincodeID: c.meta.CCID,
-		Fcn:         GetDstRollbackMeta,
+		Args:        util.ToChaincodeArgs(GetDstRollbackMeta),
 	}
 
-	var response channel.Response
-	response, err := c.consumer.ChannelClient.Query(request)
-	if err != nil {
-		return nil, err
-	}
-
-	return c.unpackMap(response)
+	resp := broker.Broker_stub.MockInvoke("1", request.Args)
+	return c.unpackMap(resp)
 }
 
 func (c *Client) GetServices() ([]string, error) {
 	request := channel.Request{
 		ChaincodeID: c.meta.CCID,
-		Fcn:         GetLocalServices,
+		Args:        util.ToChaincodeArgs(GetLocalServices),
 	}
 
-	var response channel.Response
-	response, err := c.consumer.ChannelClient.Query(request)
-	if err != nil {
-		return nil, err
-	}
-
+	response := broker.Broker_stub.MockInvoke("1", request.Args)
 	if response.Payload == nil {
 		return nil, nil
 	}
 	var r []string
-	err = json.Unmarshal(response.Payload, &r)
+	err := json.Unmarshal(response.Payload, &r)
 	if err != nil {
 		return nil, fmt.Errorf("unmarshal payload :%w", err)
 	}
@@ -602,21 +508,21 @@ func (c *Client) GetServices() ([]string, error) {
 func (c *Client) GetChainID() (string, string, error) {
 	request := channel.Request{
 		ChaincodeID: c.meta.CCID,
-		Fcn:         GetChainId,
+		Args:        util.ToChaincodeArgs(GetChainId),
 	}
 
-	response, err := c.consumer.ChannelClient.Query(request)
-	if err != nil || response.Payload == nil {
-		return "", "", err
+	response := broker.Broker_stub.MockInvoke("1", request.Args)
+	if response.Payload == nil {
+		return "", "", errors.New("err when getchainId")
 	}
 	chainIds := strings.Split(string(response.Payload), "-")
 	if len(chainIds) != 2 {
-		return "", "", err
+		return "", "", errors.New("err when getchainId")
 	}
 	return chainIds[0], chainIds[1], nil
 }
 
-func (c *Client) unpackIBTP(response *channel.Response, ibtpType pb.IBTP_Type, proof []byte) (*pb.IBTP, error) {
+func (c *Client) unpackIBTP(response *peer.Response, ibtpType pb.IBTP_Type, proof []byte) (*pb.IBTP, error) {
 	ret := &Event{}
 	if err := json.Unmarshal(response.Payload, ret); err != nil {
 		return nil, err
@@ -631,7 +537,7 @@ func (c *Client) GetUpdateMeta() chan *pb.UpdateMeta {
 	return nil
 }
 
-func (c *Client) unpackMap(response channel.Response) (map[string]uint64, error) {
+func (c *Client) unpackMap(response peer.Response) (map[string]uint64, error) {
 	if response.Payload == nil {
 		return nil, nil
 	}
