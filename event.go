@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/binary"
 	"strings"
 
 	"github.com/cloudflare/cfssl/log"
@@ -44,6 +45,11 @@ func handleArgs(args string) [][]byte {
 }
 
 func (ev *Event) encryptPayload() ([]byte, error) {
+	if len(ev.CallFunc.Args) == 3 {
+		transferAmount := make([]byte, 8)
+		binary.BigEndian.PutUint64(transferAmount, 2)
+		ev.CallFunc.Args[2] = transferAmount
+	}
 	content := &pb.Content{
 		Func: ev.CallFunc.Func,
 		Args: ev.CallFunc.Args,
