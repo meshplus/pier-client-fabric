@@ -142,9 +142,9 @@ func (broker *Broker) Init(stub shim.ChaincodeStubInterface) pb.Response {
 func (broker *Broker) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	function, args := stub.GetFunctionAndParameters()
 
-	if ok := broker.checkAdmin(stub, function); !ok {
-		return shim.Error("Not allowed to invoke interchain function by non-admin client")
-	}
+	//if ok := broker.checkAdmin(stub, function); !ok {
+	//	return shim.Error("Not allowed to invoke interchain function by non-admin client")
+	//}
 
 	if ok := broker.checkWhitelist(stub, function); !ok {
 		return shim.Error("Not allowed to invoke interchain function by unregister chaincode")
@@ -152,8 +152,8 @@ func (broker *Broker) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 
 	fmt.Printf("invoke: %s\n", function)
 	switch function {
-	case "register":
-		return broker.register(stub)
+	//case "register":
+	//	return broker.register(stub)
 	case "audit":
 		return broker.audit(stub, args)
 	case "getInnerMeta":
@@ -374,39 +374,39 @@ func (broker *Broker) EmitInterchainEvent(stub shim.ChaincodeStubInterface, args
 }
 
 // 业务合约通过该接口进行注册: 0表示正在审核，1表示审核通过，2表示审核失败
-func (broker *Broker) register(stub shim.ChaincodeStubInterface) pb.Response {
-	localWhite, err := broker.getLocalWhiteList(stub)
-	if err != nil {
-		return shim.Error(fmt.Sprintf("Get local white list :%s", err.Error()))
-	}
-	localProposal, err := broker.getLocalServiceProposal(stub)
-	if err != nil {
-		return shim.Error(fmt.Sprintf("Get local service proposal :%s", err.Error()))
-	}
-
-	key, err := getChaincodeID(stub)
-	if err != nil {
-		return shim.Error(fmt.Sprintf("get chaincode uniuqe id %s", err.Error()))
-	}
-
-	if localWhite[key] || localProposal[key].Exist {
-		return shim.Success([]byte(key))
-	}
-
-	var votedAdmins []string
-	proposal := proposal{
-		Approve:     0,
-		Reject:      0,
-		VotedAdmins: votedAdmins,
-		Exist:       true,
-	}
-	localProposal[key] = proposal
-	err = broker.putLocalServiceProposal(stub, localProposal)
-	if err != nil {
-		return shim.Error(err.Error())
-	}
-	return shim.Success([]byte(key))
-}
+//func (broker *Broker) register(stub shim.ChaincodeStubInterface) pb.Response {
+//	localWhite, err := broker.getLocalWhiteList(stub)
+//	if err != nil {
+//		return shim.Error(fmt.Sprintf("Get local white list :%s", err.Error()))
+//	}
+//	localProposal, err := broker.getLocalServiceProposal(stub)
+//	if err != nil {
+//		return shim.Error(fmt.Sprintf("Get local service proposal :%s", err.Error()))
+//	}
+//
+//	key, err := getChaincodeID(stub)
+//	if err != nil {
+//		return shim.Error(fmt.Sprintf("get chaincode uniuqe id %s", err.Error()))
+//	}
+//
+//	if localWhite[key] || localProposal[key].Exist {
+//		return shim.Success([]byte(key))
+//	}
+//
+//	var votedAdmins []string
+//	proposal := proposal{
+//		Approve:     0,
+//		Reject:      0,
+//		VotedAdmins: votedAdmins,
+//		Exist:       true,
+//	}
+//	localProposal[key] = proposal
+//	err = broker.putLocalServiceProposal(stub, localProposal)
+//	if err != nil {
+//		return shim.Error(err.Error())
+//	}
+//	return shim.Success([]byte(key))
+//}
 
 // 通过chaincode自带的CID库可以验证调用者的相关信息
 func (broker *Broker) audit(stub shim.ChaincodeStubInterface, args []string) pb.Response {

@@ -39,8 +39,8 @@ func (s *DataSwapper) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 
 	fmt.Printf("invoke: %s\n", function)
 	switch function {
-	case "register":
-		return s.register(stub)
+	//case "register":
+	//	return s.register(stub)
 	case "interchainGet":
 		return s.interchainGet(stub, args)
 	case "interchainSet":
@@ -54,14 +54,14 @@ func (s *DataSwapper) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	}
 }
 
-func (s *DataSwapper) register(stub shim.ChaincodeStubInterface) pb.Response {
-	args := util.ToChaincodeArgs("register")
-	response := stub.InvokeChaincode(brokerContractName, args, channelID)
-	if response.Status != shim.OK {
-		return shim.Error(fmt.Sprintf("invoke chaincode '%s' err: %s", brokerContractName, response.Message))
-	}
-	return response
-}
+//func (s *DataSwapper) register(stub shim.ChaincodeStubInterface) pb.Response {
+//	args := util.ToChaincodeArgs("register")
+//	response := stub.InvokeChaincode(brokerContractName, args, channelID)
+//	if response.Status != shim.OK {
+//		return shim.Error(fmt.Sprintf("invoke chaincode '%s' err: %s", brokerContractName, response.Message))
+//	}
+//	return response
+//}
 
 // get is business function which will invoke the to,tid,id
 func (s *DataSwapper) get(stub shim.ChaincodeStubInterface, args []string) pb.Response {
