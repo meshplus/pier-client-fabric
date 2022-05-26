@@ -417,37 +417,40 @@ func (broker *Broker) audit(stub shim.ChaincodeStubInterface, args []string) pb.
 	if err != nil {
 		return shim.Error(fmt.Sprintf("can not parse uint: %s", status))
 	}
-
-	localProposal, err := broker.getLocalServiceProposal(stub)
-	if err != nil {
-		return shim.Error(fmt.Sprintf("Get local service list: %s", err.Error()))
+	if (st != rejected) && (st != passed) {
+		return shim.Error(fmt.Sprintf("vote status should be 0 or 1"))
 	}
-	creatorId, err := broker.getCreatorMspId(stub)
-	if err != nil {
-		return shim.Error(fmt.Sprintf("Get creator id: %s", err.Error()))
-	}
-	proposal, ok := localProposal[getKey(channel, chaincodeName)]
-	if !ok {
-		return shim.Error(fmt.Sprintf("Proposal not found"))
-	}
-
-	result, err := broker.vote(stub, &proposal, st, creatorId)
-	if err != nil {
-		return shim.Error(fmt.Sprintf("vote proposal: %s", err.Error()))
-	}
-	if result == 0 {
-		localProposal[getKey(channel, chaincodeName)] = proposal
-		if err := broker.putLocalServiceProposal(stub, localProposal); err != nil {
-			return shim.Error(err.Error())
-		}
-		return shim.Error(fmt.Sprintf("vote proposal fail"))
-	}
-	delete(localProposal, getKey(channel, chaincodeName))
-	localProposal[getKey(channel, chaincodeName)] = proposal
-	if err := broker.putLocalServiceProposal(stub, localProposal); err != nil {
-		return shim.Error(err.Error())
-	}
-	if result == 1 {
+	//
+	//localProposal, err := broker.getLocalServiceProposal(stub)
+	//if err != nil {
+	//	return shim.Error(fmt.Sprintf("Get local service list: %s", err.Error()))
+	//}
+	//creatorId, err := broker.getCreatorMspId(stub)
+	//if err != nil {
+	//	return shim.Error(fmt.Sprintf("Get creator id: %s", err.Error()))
+	//}
+	//proposal, ok := localProposal[getKey(channel, chaincodeName)]
+	//if !ok {
+	//	return shim.Error(fmt.Sprintf("Proposal not found"))
+	//}
+	//
+	//result, err := broker.vote(stub, &proposal, st, creatorId)
+	//if err != nil {
+	//	return shim.Error(fmt.Sprintf("vote proposal: %s", err.Error()))
+	//}
+	//if result == 0 {
+	//	localProposal[getKey(channel, chaincodeName)] = proposal
+	//	if err := broker.putLocalServiceProposal(stub, localProposal); err != nil {
+	//		return shim.Error(err.Error())
+	//	}
+	//	return shim.Error(fmt.Sprintf("vote proposal fail"))
+	//}
+	//delete(localProposal, getKey(channel, chaincodeName))
+	//localProposal[getKey(channel, chaincodeName)] = proposal
+	//if err := broker.putLocalServiceProposal(stub, localProposal); err != nil {
+	//	return shim.Error(err.Error())
+	//}
+	if st == 1 {
 		localWhite, err := broker.getLocalWhiteList(stub)
 		if err != nil {
 			return shim.Error(fmt.Sprintf("Get white list :%s", err.Error()))
