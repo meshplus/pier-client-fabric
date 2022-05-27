@@ -401,7 +401,7 @@ func (c *Client) GetInMessage(servicePair string, index uint64) ([][]byte, []byt
 	}
 	results = append(results, strings.Split(string(resp.Payload), ",")...)
 
-	return util.ToChaincodeArgs(results...), nil, nil
+	return util.ToChaincodeArgs(results...), []byte("1"), nil
 }
 
 func (c *Client) GetInMeta() (map[string]uint64, error) {
