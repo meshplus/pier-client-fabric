@@ -46,7 +46,6 @@ func init() {
 	// 获取MockStub对象， 传入名称和链码实体
 	Broker_stub = shimtest.NewMockStub("Broker", bs)
 	Broker_stub.MockInit("1", nil)
-	Broker_stub.MockPeerChaincode("data_swapper", Ds_stub, "mychannel")
 }
 
 var admins []string

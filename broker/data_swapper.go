@@ -25,7 +25,6 @@ func init() {
 	// 获取MockStub对象， 传入名称和链码实体
 	Ds_stub = shimtest.NewMockStub("DataSwapper", ds)
 	Ds_stub.MockInit("1", nil)
-	Ds_stub.MockPeerChaincode("broker", Broker_stub, "mychannel")
 }
 
 type DataSwapper struct{}

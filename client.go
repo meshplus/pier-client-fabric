@@ -89,6 +89,8 @@ func (c *Client) Initialize(configPath string, extra []byte) error {
 	fabricConfig := config.Fabric
 	c.appchainID = fabricConfig.AppchainId
 	c.bitxhubID = fabricConfig.BxhId
+	broker.Ds_stub.MockPeerChaincode("broker", broker.Broker_stub, "mychannel")
+	broker.Broker_stub.MockPeerChaincode("data_swapper", broker.Ds_stub, "mychannel")
 	invoke := broker.Broker_stub.MockInvoke("1", util.ToChaincodeArgs("initialize", c.bitxhubID, c.appchainID))
 	if invoke.Status == shim.ERROR {
 		return errors.New(invoke.Message)
