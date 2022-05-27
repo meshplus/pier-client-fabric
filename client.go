@@ -24,7 +24,7 @@ var (
 	logger = hclog.New(&hclog.LoggerOptions{
 		Name:   "client",
 		Output: os.Stderr,
-		Level:  hclog.Trace,
+		Level:  hclog.Debug,
 	})
 )
 
