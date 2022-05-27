@@ -384,7 +384,7 @@ func (c *Client) GetOutMessage(servicePair string, idx uint64) (*pb.IBTP, error)
 
 	resp := broker.Broker_stub.MockInvoke("1", request.Args)
 
-	return c.unpackIBTP(&resp, pb.IBTP_INTERCHAIN, nil)
+	return c.unpackIBTP(&resp, pb.IBTP_INTERCHAIN, []byte("1"))
 }
 
 func (c *Client) GetInMessage(servicePair string, index uint64) ([][]byte, []byte, error) {
