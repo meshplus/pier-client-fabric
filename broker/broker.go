@@ -146,9 +146,9 @@ func (broker *Broker) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	//	return shim.Error("Not allowed to invoke interchain function by non-admin client")
 	//}
 
-	if ok := broker.checkWhitelist(stub, function); !ok {
-		return shim.Error("Not allowed to invoke interchain function by unregister chaincode")
-	}
+	//if ok := broker.checkWhitelist(stub, function); !ok {
+	//	return shim.Error("Not allowed to invoke interchain function by unregister chaincode")
+	//}
 
 	fmt.Printf("invoke: %s\n", function)
 	switch function {
@@ -288,11 +288,7 @@ func (broker *Broker) EmitInterchainEvent(stub shim.ChaincodeStubInterface, args
 	}
 
 	dstServiceID := args[0]
-	cid, err := getChaincodeID(stub)
-	if err != nil {
-		return shim.Error(err.Error())
-	}
-	curFullID, err := broker.genFullServiceID(stub, cid)
+	curFullID, err := broker.genFullServiceID(stub, "mychannel&data_swapper")
 	if err != nil {
 		return shim.Error(err.Error())
 	}
