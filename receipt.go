@@ -3,7 +3,6 @@ package main
 import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/meshplus/bitxhub-model/pb"
-	"github.com/tidwall/gjson"
 )
 
 func (c *Client) generateReceipt(from, to string, idx uint64, args [][]byte, proof []byte, status, encrypt bool) (*pb.IBTP, error) {
@@ -13,7 +12,7 @@ func (c *Client) generateReceipt(from, to string, idx uint64, args [][]byte, pro
 		return nil, err
 	}
 	logger.Info("generateReceipt result:" + string(content))
-	content1 := gjson.Get(string(content), "payload").Str
+	//content1 := gjson.Get(string(content), "payload").Str
 	var packed []byte
 	for _, ele := range args {
 		packed = append(packed, ele...)
@@ -21,7 +20,7 @@ func (c *Client) generateReceipt(from, to string, idx uint64, args [][]byte, pro
 
 	payload := pb.Payload{
 		Encrypted: encrypt,
-		Content:   []byte(content1),
+		Content:   content,
 		Hash:      crypto.Keccak256(packed),
 	}
 
