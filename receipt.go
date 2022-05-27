@@ -11,7 +11,7 @@ func (c *Client) generateReceipt(from, to string, idx uint64, args [][]byte, pro
 	if err != nil {
 		return nil, err
 	}
-
+	logger.Info("generateReceipt result:" + string(content))
 	var packed []byte
 	for _, ele := range args {
 		packed = append(packed, ele...)

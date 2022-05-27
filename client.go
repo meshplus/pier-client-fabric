@@ -133,7 +133,7 @@ func (c *Client) Initialize(configPath string, extra []byte) error {
 	c.ticker = time.NewTicker(2 * time.Second)
 	done := make(chan bool)
 	c.done = done
-	c.timeoutHeight = 2
+	c.timeoutHeight = 50
 
 	if err := server.Start(); err != nil {
 		return err
@@ -322,7 +322,7 @@ func (c *Client) SubmitReceipt(to string, index uint64, serviceID string, ibtpTy
 		ret.Message = fmt.Sprintf("invoke receipt for ibtp to call: %w", err)
 		return ret, nil
 	}
-	ret.Status = (resp.Status == 200)
+	ret.Status = (resp.Status == shim.OK)
 	ret.Message = resp.Message
 
 	return ret, nil
