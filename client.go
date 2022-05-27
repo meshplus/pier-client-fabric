@@ -130,7 +130,7 @@ func (c *Client) Initialize(configPath string, extra []byte) error {
 	c.meta = &ContractMeta{CCID: "1"}
 	c.name = "fabric-mock"
 	c.serviceMeta = m
-	c.ticker = time.NewTicker(2 * time.Second)
+	c.ticker = time.NewTicker(15 * time.Second)
 	done := make(chan bool)
 	c.done = done
 	c.timeoutHeight = 50
