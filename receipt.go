@@ -32,7 +32,7 @@ func (c *Client) generateReceipt(from, to string, idx uint64, args [][]byte, pro
 	if !status {
 		typ = pb.IBTP_RECEIPT_FAILURE
 	}
-
+	logger.Info("generateReceipt pd:" + string(pd))
 	return &pb.IBTP{
 		From:          from,
 		To:            to,
