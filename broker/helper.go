@@ -315,19 +315,19 @@ func (broker *Broker) putLocalServiceList(stub shim.ChaincodeStubInterface, loca
 	return stub.PutState(localServiceList, localServiceBytes)
 }
 
-func (broker *Broker) getReceiptMessages(stub shim.ChaincodeStubInterface) (map[string](map[uint64]pb.Response), error) {
+func (broker *Broker) getReceiptMessages(stub shim.ChaincodeStubInterface) (map[string](map[uint64][]byte), error) {
 	messagesBytes, err := stub.GetState(receiptMessages)
 	if err != nil {
 		return nil, err
 	}
-	messages := make(map[string](map[uint64]pb.Response))
+	messages := make(map[string](map[uint64][]byte))
 	if err := json.Unmarshal(messagesBytes, &messages); err != nil {
 		return nil, err
 	}
 	return messages, nil
 }
 
-func (broker *Broker) setReceiptMessages(stub shim.ChaincodeStubInterface, messages map[string](map[uint64]pb.Response)) error {
+func (broker *Broker) setReceiptMessages(stub shim.ChaincodeStubInterface, messages map[string](map[uint64][]byte)) error {
 	messagesBytes, err := json.Marshal(messages)
 	if err != nil {
 		return err

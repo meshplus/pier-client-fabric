@@ -220,7 +220,7 @@ func (broker *Broker) initMap(stub shim.ChaincodeStubInterface) error {
 	locallProposal := make(map[string]proposal)
 	localWhiteByte, err := json.Marshal(localWhite)
 	initOutMessages := make(map[string](map[uint64]Event))
-	initReceiptMessage := make(map[string](map[uint64]pb.Response))
+	initReceiptMessage := make(map[string](map[uint64][]byte))
 	var validators []string
 	if err != nil {
 		return err
@@ -718,9 +718,9 @@ func (broker *Broker) invokeInterchain(stub shim.ChaincodeStubInterface, args []
 	}
 	_, ok := receipts[ServicePair]
 	if !ok {
-		receipts[ServicePair] = make(map[uint64]pb.Response)
+		receipts[ServicePair] = make(map[uint64][]byte)
 	}
-	receipts[ServicePair][index] = response
+	receipts[ServicePair][index] = response.Payload
 	if err := broker.setReceiptMessages(stub, receipts); err != nil {
 		return errorResponse(err.Error())
 	}
