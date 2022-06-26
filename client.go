@@ -34,19 +34,20 @@ var (
 var _ plugins.Client = (*Client)(nil)
 
 const (
-	GetInnerMetaMethod      = "getInnerMeta"       // get last index of each source chain executing tx
-	GetOutMetaMethod        = "getOuterMeta"       // get last index of each receiving chain crosschain event
-	GetCallbackMetaMethod   = "getCallbackMeta"    // get last index of each receiving chain callback tx
-	GetDstRollbackMeta      = "getDstRollbackMeta" // get last index of each receiving chain dst roll back tx
-	GetLocalServices        = "getLocalServices"
-	GetChainId              = "getChainId"
-	GetInMessageMethod      = "getInMessage"
-	GetOutMessageMethod     = "getOutMessage"
-	PollingEventMethod      = "pollingEvent"
-	InvokeInterchainMethod  = "invokeInterchain"
-	InvokeReceiptMethod     = "invokeReceipt"
-	InvokeIndexUpdateMethod = "invokeIndexUpdate"
-	FabricType              = "fabric"
+	GetInnerMetaMethod                   = "getInnerMeta"       // get last index of each source chain executing tx
+	GetOutMetaMethod                     = "getOuterMeta"       // get last index of each receiving chain crosschain event
+	GetCallbackMetaMethod                = "getCallbackMeta"    // get last index of each receiving chain callback tx
+	GetDstRollbackMeta                   = "getDstRollbackMeta" // get last index of each receiving chain dst roll back tx
+	GetLocalServices                     = "getLocalServices"
+	GetChainId                           = "getChainId"
+	GetInMessageMethod                   = "getInMessage"
+	GetOutMessageMethod                  = "getOutMessage"
+	PollingEventMethod                   = "pollingEvent"
+	InvokeInterchainMethod               = "invokeInterchain"
+	InvokeReceiptMethod                  = "invokeReceipt"
+	InvokeIndexUpdateMethod              = "invokeIndexUpdate"
+	InvokeGetDirectTransactionMetaMethod = "getDirectTransactionMeta"
+	FabricType                           = "fabric"
 )
 
 type ContractMeta struct {
@@ -55,6 +56,11 @@ type ContractMeta struct {
 	CCID        string `json:"ccid"`
 	ChannelID   string `json:"channel_id"`
 	ORG         string `json:"org"`
+}
+
+type DirectTransactionMeta struct {
+	StartTimestamp    int64
+	TransactionStatus uint64
 }
 
 type Client struct {
@@ -350,6 +356,28 @@ func (c *Client) SubmitReceipt(to string, index uint64, serviceID string, ibtpTy
 	ret.Message = resp.Message
 
 	return ret, nil
+}
+
+func (c *Client) GetDirectTransactionMeta(IBTPid string) (uint64, uint64, uint64, error) {
+
+	args := util.ToChaincodeArgs(IBTPid)
+	request := channel.Request{
+		ChaincodeID: c.meta.CCID,
+		Fcn:         InvokeGetDirectTransactionMetaMethod,
+		Args:        args,
+	}
+	var response channel.Response
+	response, err := c.consumer.ChannelClient.Execute(request)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	ret := &DirectTransactionMeta{}
+	if err := json.Unmarshal(response.Payload, ret); err != nil {
+		return 0, 0, 0, err
+	}
+
+	return uint64(ret.StartTimestamp), uint64(c.config.Fabric.TimeoutHeight), ret.TransactionStatus, nil
+
 }
 
 func (c *Client) InvokeInterchain(srcFullID string, index uint64, destAddr string, reqType uint64, callFunc string, callArgs [][]byte, txStatus uint64, multiSign [][]byte, encrypt bool) (*channel.Response, *Response, error) {
