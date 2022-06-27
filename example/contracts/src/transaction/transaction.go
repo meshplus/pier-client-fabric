@@ -4,11 +4,11 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"strings"
+
 	"github.com/golang/protobuf/ptypes/timestamp"
-	"github.com/hyperledger/fabric/common/util"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	pb "github.com/hyperledger/fabric/protos/peer"
-	"strings"
 )
 
 const (
@@ -38,11 +38,6 @@ func (transaction *Transaction) Init(stub shim.ChaincodeStubInterface) pb.Respon
 	err := transaction.initMap(stub)
 	if err != nil {
 		return shim.Error(err.Error())
-	}
-	args := util.ToChaincodeArgs("registerDirectTransaction")
-	response := stub.InvokeChaincode(brokerContractName, args, channelID)
-	if response.Status != shim.OK {
-		return shim.Error(fmt.Sprintf("invoke chaincode '%s' err: %s", brokerContractName, response.Message))
 	}
 	return shim.Success(nil)
 }
