@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/golang/protobuf/ptypes/timestamp"
+	"github.com/hyperledger/fabric/common/util"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	pb "github.com/hyperledger/fabric/protos/peer"
 )
@@ -24,12 +25,12 @@ const (
 )
 
 type Appchain struct {
-	id        string
-	broker    string
-	trustRoot string
-	ruleAddr  string
-	status    uint64
-	exist     bool
+	Id        string `json:"id"`
+	Broker    string `json:"broker"`
+	TrustRoot string `json:"trustRoot"`
+	RuleAddr  string `json:"ruleAddr"`
+	Status    uint64 `json:"status"`
+	Exist     bool   `json:"exist"`
 }
 
 type Transaction struct{}
@@ -38,6 +39,11 @@ func (transaction *Transaction) Init(stub shim.ChaincodeStubInterface) pb.Respon
 	err := transaction.initMap(stub)
 	if err != nil {
 		return shim.Error(err.Error())
+	}
+	args := util.ToChaincodeArgs("registerDirectTransaction")
+	response := stub.InvokeChaincode(brokerContractName, args, channelID)
+	if response.Status != shim.OK {
+		return shim.Error(fmt.Sprintf("invoke chaincode '%s' err: %s", brokerContractName, response.Message))
 	}
 	return shim.Success(nil)
 }
@@ -125,16 +131,16 @@ func (transaction *Transaction) registerAppchain(stub shim.ChaincodeStubInterfac
 		return errorResponse(err.Error())
 	}
 	chainID := args[0]
-	if appchains[chainID].exist {
+	if appchains[chainID].Exist {
 		return shim.Error("this appchain has already been registered")
 	}
 	appchain := Appchain{
-		id:        chainID,
-		broker:    args[1],
-		trustRoot: args[2],
-		ruleAddr:  args[3],
-		status:    1,
-		exist:     true,
+		Id:        chainID,
+		Broker:    args[1],
+		TrustRoot: args[2],
+		RuleAddr:  args[3],
+		Status:    1,
+		Exist:     true,
 	}
 	appchains[chainID] = appchain
 	transaction.setAppchainsMeta(stub, appchains)
@@ -151,7 +157,7 @@ func (transaction *Transaction) getAppchainInfo(stub shim.ChaincodeStubInterface
 		return errorResponse(err.Error())
 	}
 	chainID := args[0]
-	if !appchains[chainID].exist {
+	if !appchains[chainID].Exist {
 		return errorResponse("this appchain is not registered")
 	}
 	ret, err := json.Marshal(appchains[chainID])
@@ -171,10 +177,10 @@ func (transaction *Transaction) registerRemoteService(stub shim.ChaincodeStubInt
 	chainID := args[0]
 	serviceId := args[1]
 	whiteList := strings.Split(args[2], "^")
-	if appchains[chainID].exist == false {
+	if appchains[chainID].Exist == false {
 		return errorResponse("this appchain is not registered")
 	}
-	if appchains[chainID].status != 1 {
+	if appchains[chainID].Status != 1 {
 		return errorResponse("the appchain's status is not available")
 	}
 	fullServiceID := transaction.genRemoteFullServiceID(chainID, serviceId)

@@ -95,8 +95,8 @@ type Receipt struct {
 }
 
 type DirectTransactionMeta struct {
-	StartTimestamp    int64
-	TransactionStatus uint64
+	StartTimestamp    int64  `json:"start_timestamp"`
+	TransactionStatus uint64 `json:"transaction_status"`
 }
 
 func (broker *Broker) Init(stub shim.ChaincodeStubInterface) pb.Response {
@@ -156,6 +156,8 @@ func (broker *Broker) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	switch function {
 	case "register":
 		return broker.register(stub)
+	case "registerDirectTransaction":
+		return broker.registerDirectTransaction(stub)
 	case "audit":
 		return broker.audit(stub, args)
 	case "getInnerMeta":
@@ -216,7 +218,7 @@ func (broker *Broker) initialize(stub shim.ChaincodeStubInterface, args []string
 	}
 
 	if len(args) != 3 {
-		return shim.Error("incorrect number of arguments, expecting 2")
+		return shim.Error("incorrect number of arguments, expecting 3")
 	}
 
 	if err := stub.PutState(bxhID, []byte(args[0])); err != nil {
@@ -493,6 +495,10 @@ func (broker *Broker) register(stub shim.ChaincodeStubInterface) pb.Response {
 		return shim.Error(err.Error())
 	}
 	return shim.Success([]byte(key))
+}
+
+func (broker *Broker) registerDirectTransaction(stub shim.ChaincodeStubInterface) pb.Response {
+	return shim.Success(nil)
 }
 
 // 通过chaincode自带的CID库可以验证调用者的相关信息
@@ -951,7 +957,7 @@ func (broker *Broker) invokeReceipt(stub shim.ChaincodeStubInterface, args []str
 }
 
 func (broker *Broker) registerAppchain(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	if len(args) != 3 {
+	if len(args) != 4 {
 		return shim.Error("incorrect number of arguments, expecting 4")
 	}
 	chainId := args[0]
@@ -963,7 +969,7 @@ func (broker *Broker) registerAppchain(stub shim.ChaincodeStubInterface, args []
 	if response.Status != shim.OK {
 		return shim.Error(fmt.Errorf("invoke transaction chaincode: %d - %s", response.Status, response.Message).Error())
 	}
-	return shim.Success(nil)
+	return shim.Success(response.Payload)
 }
 
 func (broker *Broker) registerRemoteService(stub shim.ChaincodeStubInterface, args []string) pb.Response {
