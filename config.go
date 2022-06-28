@@ -23,6 +23,7 @@ type Fabric struct {
 	Org           string `toml:"org" json:"org"`
 	ServerPort    string `toml:"server_port" json:"server_port"`
 	TimeoutHeight int64  `mapstructure:"timeout_height" json:"timeout_height"`
+	TimeoutPeriod uint64 `mapstructure:"timeout_period" json:"timeout_period"`
 }
 
 type Service struct {
@@ -40,6 +41,7 @@ func DefaultConfig() *Config {
 			ChannelId:     "mychannel",
 			Org:           "org2",
 			TimeoutHeight: 30,
+			TimeoutPeriod: 60,
 		},
 		Services: nil,
 	}

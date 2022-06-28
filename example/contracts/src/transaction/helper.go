@@ -1,8 +1,6 @@
 package main
 
 import (
-	"bytes"
-	"encoding/binary"
 	"encoding/json"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/timestamp"
@@ -153,12 +151,6 @@ func (transaction *Transaction) genRemoteFullServiceID(chainID string, serviceID
 
 func (transaction *Transaction) genIBTPid(from string, to string, id string) string {
 	return from + hyphen + to + hyphen + id
-}
-
-func (transaction *Transaction) IntToBytes(n int64) []byte {
-	bytesBuffer := bytes.NewBuffer([]byte{})
-	binary.Write(bytesBuffer, binary.BigEndian, n)
-	return bytesBuffer.Bytes()
 }
 
 type response struct {

@@ -1033,14 +1033,9 @@ func (broker *Broker) getDirectTransactionMeta(stub shim.ChaincodeStubInterface,
 	if response2.Status != shim.OK {
 		return shim.Error(fmt.Errorf("invoke transaction chaincode: %d - %s", response.Status, response.Message).Error())
 	}
-	var startTimestamp int64
-	var transactionStatus uint64
-	if err := json.Unmarshal(response.Payload, startTimestamp); err != nil {
-		return shim.Error(err.Error())
-	}
-	if err := json.Unmarshal(response2.Payload, transactionStatus); err != nil {
-		return shim.Error(err.Error())
-	}
+	startTimestamp := int64(binary.BigEndian.Uint64(response.Payload))
+	transactionStatus := binary.BigEndian.Uint64(response2.Payload)
+
 	directTransactionMeta := DirectTransactionMeta{
 		StartTimestamp:    startTimestamp,
 		TransactionStatus: transactionStatus,

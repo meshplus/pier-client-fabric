@@ -206,8 +206,10 @@ func (transaction *Transaction) getRemoteServiceList(stub shim.ChaincodeStubInte
 		return errorResponse(err.Error())
 	}
 	res := make([]string, len(remoteWhiteList))
+	i := 0
 	for k := range remoteWhiteList {
-		res = append(res, k)
+		res[i] = k
+		i++
 	}
 	v, err := json.Marshal(res)
 	if err != nil {
@@ -232,6 +234,7 @@ func (transaction *Transaction) startTransaction(stub shim.ChaincodeStubInterfac
 		return shim.Error("Transaction is recorded.")
 	}
 	transactionStatus[ibtpId] = 1
+	transaction.putMap(stub, transactionStatusMeta, transactionStatus)
 	startTimestamp, err := transaction.getStartTimeStampMeta(stub)
 	if err != nil {
 		return shim.Error(err.Error())
@@ -241,6 +244,7 @@ func (transaction *Transaction) startTransaction(stub shim.ChaincodeStubInterfac
 		return shim.Error(err.Error())
 	}
 	startTimestamp[ibtpId] = *stamp
+	transaction.setStartTimeStampMeta(stub, startTimestamp)
 	return shim.Success(nil)
 
 }
@@ -327,8 +331,8 @@ func (transaction *Transaction) endTransactionRollback(stub shim.ChaincodeStubIn
 }
 
 func (transaction *Transaction) getTransactionStatus(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	if len(args) != 3 {
-		return shim.Error("incorrect number of arguments, expecting 3")
+	if len(args) != 1 {
+		return shim.Error("incorrect number of arguments, expecting 1")
 	}
 	ibtpId := args[0]
 	transactionStatus, err := transaction.getMap(stub, transactionStatusMeta)
@@ -337,10 +341,13 @@ func (transaction *Transaction) getTransactionStatus(stub shim.ChaincodeStubInte
 	}
 	res := make([]byte, 8)
 	binary.BigEndian.PutUint64(res, transactionStatus[ibtpId])
-	return shim.Success(res)
+	return shim.Success(res[:])
 }
 
 func (transaction *Transaction) getStartTimestamp(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	if len(args) != 1 {
+		return shim.Error("incorrect number of arguments, expecting 1")
+	}
 	startTimestamp, err := transaction.getStartTimeStampMeta(stub)
 	if err != nil {
 		return shim.Error(err.Error())
@@ -349,7 +356,8 @@ func (transaction *Transaction) getStartTimestamp(stub shim.ChaincodeStubInterfa
 	if err != nil {
 		return shim.Error(err.Error())
 	}
-	res := transaction.IntToBytes(stamp.Seconds)
+	res := make([]byte, 8)
+	binary.BigEndian.PutUint64(res, uint64(stamp.Seconds))
 	return shim.Success(res)
 }
 

@@ -59,8 +59,8 @@ type ContractMeta struct {
 }
 
 type DirectTransactionMeta struct {
-	StartTimestamp    int64
-	TransactionStatus uint64
+	StartTimestamp    int64  `json:"start_timestamp"`
+	TransactionStatus uint64 `json:"transaction_status"`
 }
 
 type Client struct {
@@ -376,7 +376,7 @@ func (c *Client) GetDirectTransactionMeta(IBTPid string) (uint64, uint64, uint64
 		return 0, 0, 0, err
 	}
 
-	return uint64(ret.StartTimestamp), uint64(c.config.Fabric.TimeoutHeight), ret.TransactionStatus, nil
+	return uint64(ret.StartTimestamp), c.config.Fabric.TimeoutPeriod, ret.TransactionStatus, nil
 
 }
 
