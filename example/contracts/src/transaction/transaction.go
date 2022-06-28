@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/golang/protobuf/ptypes/timestamp"
-	"github.com/hyperledger/fabric/common/util"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	pb "github.com/hyperledger/fabric/protos/peer"
 )
@@ -40,11 +39,6 @@ func (transaction *Transaction) Init(stub shim.ChaincodeStubInterface) pb.Respon
 	if err != nil {
 		return shim.Error(err.Error())
 	}
-	args := util.ToChaincodeArgs("registerDirectTransaction")
-	response := stub.InvokeChaincode(brokerContractName, args, channelID)
-	if response.Status != shim.OK {
-		return shim.Error(fmt.Sprintf("invoke chaincode '%s' err: %s", brokerContractName, response.Message))
-	}
 	return shim.Success(nil)
 }
 
@@ -75,9 +69,6 @@ func (transaction *Transaction) initMap(stub shim.ChaincodeStubInterface) error 
 
 func (transaction *Transaction) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	function, args := stub.GetFunctionAndParameters()
-	if ok := transaction.checkBroker(stub, function); !ok {
-		return shim.Error("Invoker are not the Broker")
-	}
 
 	fmt.Printf("invoke: %s\n", function)
 	switch function {

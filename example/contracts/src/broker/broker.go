@@ -156,8 +156,6 @@ func (broker *Broker) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	switch function {
 	case "register":
 		return broker.register(stub)
-	case "registerDirectTransaction":
-		return broker.registerDirectTransaction(stub)
 	case "audit":
 		return broker.audit(stub, args)
 	case "getInnerMeta":
@@ -495,10 +493,6 @@ func (broker *Broker) register(stub shim.ChaincodeStubInterface) pb.Response {
 		return shim.Error(err.Error())
 	}
 	return shim.Success([]byte(key))
-}
-
-func (broker *Broker) registerDirectTransaction(stub shim.ChaincodeStubInterface) pb.Response {
-	return shim.Success(nil)
 }
 
 // 通过chaincode自带的CID库可以验证调用者的相关信息
