@@ -70,9 +70,9 @@ func (transaction *Transaction) initMap(stub shim.ChaincodeStubInterface) error 
 func (transaction *Transaction) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	function, args := stub.GetFunctionAndParameters()
 
-	if ok := transaction.checkBroker(stub, function); !ok {
+	/*if ok := transaction.checkBroker(stub, function); !ok {
 		return shim.Error("Not allowed to invoke interchain function by non-broker contract")
-	}
+	}*/
 
 	fmt.Printf("invoke: %s\n", function)
 	switch function {
