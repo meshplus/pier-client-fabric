@@ -450,7 +450,8 @@ func (broker *Broker) EmitInterchainEvent(stub shim.ChaincodeStubInterface, args
 
 	//直连模式下创建并事务
 	if threshold == 0 {
-		b := util.ToChaincodeArgs("startTransaction", curFullID, dstServiceID, string(outMeta[outServicePair]))
+		index := strconv.Itoa(int(outMeta[outServicePair]))
+		b := util.ToChaincodeArgs("startTransaction", curFullID, dstServiceID, index)
 		response := stub.InvokeChaincode(transactionContractName, b, channelID)
 		if response.Status != shim.OK {
 			return shim.Error(fmt.Errorf("invoke transaction chaincode: %d - %s", response.Status, response.Message).Error())
