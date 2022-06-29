@@ -47,6 +47,7 @@ const (
 	InvokeReceiptMethod                  = "invokeReceipt"
 	InvokeIndexUpdateMethod              = "invokeIndexUpdate"
 	InvokeGetDirectTransactionMetaMethod = "getDirectTransactionMeta"
+	InvokerGetAppchainInfoMethod         = "getAppchainInfo"
 	FabricType                           = "fabric"
 )
 
@@ -87,6 +88,15 @@ type Validator struct {
 type CallFunc struct {
 	Func string   `json:"func"`
 	Args [][]byte `json:"args"`
+}
+
+type Appchain struct {
+	Id        string `json:"id"`
+	Broker    string `json:"broker"`
+	TrustRoot string `json:"trustRoot"`
+	RuleAddr  string `json:"ruleAddr"`
+	Status    uint64 `json:"status"`
+	Exist     bool   `json:"exist"`
 }
 
 func (c *Client) Initialize(configPath string, extra []byte) error {
@@ -712,7 +722,22 @@ func (c *Client) unpackMap(response channel.Response) (map[string]uint64, error)
 }
 
 func (c *Client) GetAppchainInfo(chainID string) (string, []byte, string, error) {
-	return "", nil, "", nil
+	args := util.ToChaincodeArgs(chainID)
+	request := channel.Request{
+		ChaincodeID: c.meta.CCID,
+		Fcn:         InvokerGetAppchainInfoMethod,
+		Args:        args,
+	}
+	var response channel.Response
+	response, err := c.consumer.ChannelClient.Execute(request)
+	if err != nil {
+		return "", nil, "", err
+	}
+	ret := &Appchain{}
+	if err := json.Unmarshal(response.Payload, ret); err != nil {
+		return "", nil, "", err
+	}
+	return ret.Broker, []byte(ret.TrustRoot), ret.RuleAddr, nil
 }
 
 type handler struct {
