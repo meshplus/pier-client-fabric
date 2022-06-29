@@ -786,3 +786,18 @@ func parseServicePair(servicePair string) (string, string, error) {
 func genServicePair(from, to string) string {
 	return fmt.Sprintf("%s-%s", from, to)
 }
+
+func (c *Client) GetOffChainData(request *pb.GetDataRequest) (*pb.GetDataResponse, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *Client) GetOffChainDataReq() chan *pb.GetDataRequest {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *Client) SubmitOffChainData(response *pb.GetDataResponse) error {
+	//TODO implement me
+	panic("implement me")
+}

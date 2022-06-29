@@ -330,7 +330,7 @@ func (broker *Broker) EmitInterchainEvent(stub shim.ChaincodeStubInterface, args
 		flag := false
 		remoteServices := broker.getRemoteServiceList(stub).Payload
 		var remoteServicesRes []string
-		if err := json.Unmarshal(remoteServices, remoteServicesRes); err != nil {
+		if err := json.Unmarshal(remoteServices, &remoteServicesRes); err != nil {
 			return shim.Error(err.Error())
 		}
 		for _, remoteService := range remoteServicesRes {
@@ -345,7 +345,7 @@ func (broker *Broker) EmitInterchainEvent(stub shim.ChaincodeStubInterface, args
 		flag = false
 		banList := broker.getRSWhiteList(stub, []string{dstServiceID}).Payload
 		var banListRes []string
-		if err := json.Unmarshal(banList, banListRes); err != nil {
+		if err := json.Unmarshal(banList, &banListRes); err != nil {
 			return shim.Error(err.Error())
 		}
 		creatorByte, err := stub.GetCreator()
@@ -1132,27 +1132,28 @@ func (broker *Broker) checkService(stub shim.ChaincodeStubInterface, remoteServi
 	// if err != nil {
 	// 	return err
 	// }
-
-	localWhite, err := broker.getLocalWhiteList(stub)
-	if err != nil {
-		return err
-	}
-	if !localWhite[destAddr] {
-		return fmt.Errorf("dest address is not in local white list")
-	}
 	threshold, err := broker.getValThreshold(stub)
 	if err != nil {
 		return err
+	}
+	if threshold != 0 {
+		localWhite, err := broker.getLocalWhiteList(stub)
+		if err != nil {
+			return err
+		}
+		if !localWhite[destAddr] {
+			return fmt.Errorf("dest address is not in local white list")
+		}
 	}
 	if threshold == 0 {
 		flag := false
 		remoteServices := broker.getRemoteServiceList(stub).Payload
 		var remoteServicesRes []string
-		if err := json.Unmarshal(remoteServices, remoteServicesRes); err != nil {
+		if err := json.Unmarshal(remoteServices, &remoteServicesRes); err != nil {
 			return err
 		}
-		for _, remoteService := range remoteServicesRes {
-			if remoteService == destAddr {
+		for _, remoteServiceId := range remoteServicesRes {
+			if remoteServiceId == remoteService {
 				flag = true
 				break
 			}
@@ -1163,7 +1164,7 @@ func (broker *Broker) checkService(stub shim.ChaincodeStubInterface, remoteServi
 		flag = false
 		banList := broker.getRSWhiteList(stub, []string{destAddr}).Payload
 		var banListRes []string
-		if err := json.Unmarshal(banList, banListRes); err != nil {
+		if err := json.Unmarshal(banList, &banListRes); err != nil {
 			return err
 		}
 		creatorByte, err := stub.GetCreator()
