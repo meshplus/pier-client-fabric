@@ -870,11 +870,12 @@ func (broker *Broker) invokeReceipt(stub shim.ChaincodeStubInterface, args []str
 	}
 	//直连模式下决定事务结果
 	if threshold == 0 {
+		indexStr := strconv.Itoa(int(index))
 		if typ != 1 && typ != 2 && typ != 3 && typ != 4 {
 			return errorResponse("IBTP type is not correct in direct mode")
 		}
 		if typ == 1 {
-			b := util.ToChaincodeArgs("endTransactionSuccess", srcFullID, dstFullID, string(index))
+			b := util.ToChaincodeArgs("endTransactionSuccess", srcFullID, dstFullID, indexStr)
 			response := stub.InvokeChaincode(transactionContractName, b, channelID)
 			if response.Status != shim.OK {
 				return shim.Error(fmt.Errorf("invoke transaction chaincode: %d - %s", response.Status, response.Message).Error())
@@ -882,7 +883,7 @@ func (broker *Broker) invokeReceipt(stub shim.ChaincodeStubInterface, args []str
 		}
 		if typ == 2 {
 			isRollback = true
-			b := util.ToChaincodeArgs("endTransactionFail", srcFullID, dstFullID, string(index))
+			b := util.ToChaincodeArgs("endTransactionFail", srcFullID, dstFullID, indexStr)
 			response := stub.InvokeChaincode(transactionContractName, b, channelID)
 			if response.Status != shim.OK {
 				return shim.Error(fmt.Errorf("invoke transaction chaincode: %d - %s", response.Status, response.Message).Error())
@@ -890,14 +891,14 @@ func (broker *Broker) invokeReceipt(stub shim.ChaincodeStubInterface, args []str
 		}
 		if typ == 3 {
 			isRollback = true
-			b := util.ToChaincodeArgs("rollbackTransaction", srcFullID, dstFullID, string(index))
+			b := util.ToChaincodeArgs("rollbackTransaction", srcFullID, dstFullID, indexStr)
 			response := stub.InvokeChaincode(transactionContractName, b, channelID)
 			if response.Status != shim.OK {
 				return shim.Error(fmt.Errorf("invoke transaction chaincode: %d - %s", response.Status, response.Message).Error())
 			}
 		}
 		if typ == 4 {
-			b := util.ToChaincodeArgs("endTransactionRollback", srcFullID, dstFullID, string(index))
+			b := util.ToChaincodeArgs("endTransactionRollback", srcFullID, dstFullID, indexStr)
 			response := stub.InvokeChaincode(transactionContractName, b, channelID)
 			if response.Status != shim.OK {
 				return shim.Error(fmt.Errorf("invoke transaction chaincode: %d - %s", response.Status, response.Message).Error())
