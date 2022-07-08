@@ -23,6 +23,11 @@ fabric1.4:
 	mkdir -p build
 	$(GO) build -o build/fabric-client-1.4 ./*.go
 
+fabric2.0:
+	@packr
+	mkdir -p build
+	$(GO) build -o build/fabric-client-2.0 ./*.go
+
 docker:
 	mkdir -p build
 	cd build && rm -rf pier && cp -r ../../pier pier

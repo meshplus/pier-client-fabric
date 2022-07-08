@@ -7,9 +7,9 @@ import (
 	"strconv"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/hyperledger/fabric/core/chaincode/shim"
-	"github.com/hyperledger/fabric/protos/msp"
-	pb "github.com/hyperledger/fabric/protos/peer"
+	"github.com/hyperledger/fabric-chaincode-go/shim"
+	"github.com/hyperledger/fabric-protos-go/msp"
+	pb "github.com/hyperledger/fabric-protos-go/peer"
 )
 
 type response struct {
@@ -418,4 +418,12 @@ func (broker *Broker) setValidatorList(stub shim.ChaincodeStubInterface, list []
 	}
 
 	return stub.PutState(validatorList, listBytes)
+}
+
+func (broker *Broker) ToChaincodeArgs(args ...string) [][]byte {
+	bargs := make([][]byte, len(args))
+	for i, arg := range args {
+		bargs[i] = []byte(arg)
+	}
+	return bargs
 }
