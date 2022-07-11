@@ -418,8 +418,8 @@ github.com/hyperledger/fabric-protos-go v0.0.0-20190919234611-2a87503ac7c9/go.mo
 github.com/hyperledger/fabric-protos-go v0.0.0-20191121202242-f5500d5e3e85/go.mod h1:xVYTjK4DtZRBxZ2D9aE4y6AbLaPwue2o/criQyQbVD0=
 github.com/hyperledger/fabric-protos-go v0.0.0-20201028172056-a3136dde2354 h1:6vLLEpvDbSlmUJFjg1hB5YMBpI+WgKguztlONcAFBoY=
 github.com/hyperledger/fabric-protos-go v0.0.0-20201028172056-a3136dde2354/go.mod h1:xVYTjK4DtZRBxZ2D9aE4y6AbLaPwue2o/criQyQbVD0=
-github.com/hyperledger/fabric-sdk-go v1.0.0-beta1.0.20200106161850-8f3d32c9d1a6 h1:oEdHFGkrXcfoJdXmxem5fCyXS23SdfHc2UPt5g8o6HM=
-github.com/hyperledger/fabric-sdk-go v1.0.0-beta1.0.20200106161850-8f3d32c9d1a6/go.mod h1:/s224b8NLvOJOCIqBvWd9O6u7GE33iuIOT6OfcTE1OE=
+github.com/hyperledger/fabric-sdk-go v1.0.0-beta2 h1:FBYygns0Qga+mQ4PXycyTU5m4N9KAZM+Ttf7agiV7M8=
+github.com/hyperledger/fabric-sdk-go v1.0.0-beta2/go.mod h1:/s224b8NLvOJOCIqBvWd9O6u7GE33iuIOT6OfcTE1OE=
 github.com/iancoleman/orderedmap v0.2.0/go.mod h1:N0Wam8K1arqPXNWjMo21EXnBPOPp36vB07FNRdD2geA=
 github.com/ianlancetaylor/demangle v0.0.0-20181102032728-5e5cf60278f6/go.mod h1:aSSvb/t6k1mPoxDqO4vJh6VOCGPwU4O0C2/Eqndh1Sc=
 github.com/inconshreveable/mousetrap v1.0.0 h1:Z8tu5sraLXCXIcARxBp/8cbvlwVa7Z1NHg9XEKhtSvM=
