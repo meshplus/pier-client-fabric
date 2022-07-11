@@ -51,6 +51,7 @@ func (g *ValidatorServer) Start() error {
 		//v1.POST("data_swapper/interchain_set", g.ds_interchain_set)
 		v1.POST("broker", g.broker_call)
 		v1.POST("data_swapper", g.ds_call)
+		v1.POST("transfer", g.t_call)
 
 	}
 
@@ -91,6 +92,18 @@ func (g *ValidatorServer) ds_call(c *gin.Context) {
 	invoke := broker.Ds_stub.MockInvoke("1", util.ToChaincodeArgs(req.Args...))
 	//var r string
 	//err := json.Unmarshal(invoke.Payload, &r)
+	if invoke.Status != 200 {
+		c.JSON(http.StatusInternalServerError, invoke.Message)
+	}
+	c.JSON(http.StatusOK, string(invoke.Payload))
+}
+
+func (g *ValidatorServer) t_call(c *gin.Context) {
+	req := &MockReq{}
+	if err := c.ShouldBindJSON(req); err != nil {
+		c.JSON(http.StatusInternalServerError, err)
+	}
+	invoke := broker.T_stub.MockInvoke("1", util.ToChaincodeArgs(req.Args...))
 	if invoke.Status != 200 {
 		c.JSON(http.StatusInternalServerError, invoke.Message)
 	}

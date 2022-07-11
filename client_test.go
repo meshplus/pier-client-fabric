@@ -2,36 +2,71 @@ package main
 
 import (
 	"fmt"
+	"github.com/hyperledger/fabric-chaincode-go/shim"
+	"github.com/hyperledger/fabric/common/util"
+	"github.com/stretchr/testify/require"
 	"testing"
 
 	"github.com/hyperledger/fabric-chaincode-go/shimtest"
 	"github.com/meshplus/pier-client-fabric/broker"
 )
 
-func Test(t *testing.T) {
-	// SimpleChaincode为链码逻辑中实现的实际struct
-	cc := new(broker.Broker)
-	// 获取MockStub对象， 传入名称和链码实体
-	stub := shimtest.NewMockStub("broker", cc)
+func TestTransfer(t *testing.T) {
+	transferContract := new(broker.Transfer)
+	stub := shimtest.NewMockStub("transfer", transferContract)
 
-	// 构造初始化args，在example02中，初始化参数有四个，分别是给两个对象初始化值
-	initArgs := [][]byte{[]byte("init"), []byte("a"), []byte("100"), []byte("b"), []byte("200")}
-	// 初始化链码
-	res := stub.MockInit("1", initArgs)
+	// setBalance
+	res := stub.MockInvoke("1", util.ToChaincodeArgs("setBalance", "Alice", "10000"))
+	require.Equal(t, shim.OK, int(res.Status))
 	fmt.Println(res)
 
-	// 调用invoke方法中的query方法，查询a的值，得到a为100，说明初始化成功
-	queryArgs := [][]byte{[]byte("query"), []byte("a")}
-	res = stub.MockInvoke("1", queryArgs)
+	// getBalance
+	res = stub.MockInvoke("1", util.ToChaincodeArgs("getBalance", "Alice"))
+	require.Equal(t, shim.OK, int(res.Status))
+	fmt.Println(string(res.Payload))
+
+	brokerContract := new(broker.Broker)
+	brokerStub := shimtest.NewMockStub("broker", brokerContract)
+	stub.MockPeerChaincode("broker", brokerStub, "mychannel")
+	brokerStub.MockPeerChaincode("transfer", stub, "mychannel")
+	invoke := brokerStub.MockInvoke("1", util.ToChaincodeArgs("initialize", "1356", "testchain"))
+	require.Equal(t, shim.OK, int(invoke.Status))
+
+	res = stub.MockInvoke("1", util.ToChaincodeArgs("transfer", "1356:chain0:mychannel&transfer", "Alice", "Bob", "100"))
+	require.Equal(t, shim.OK, int(res.Status))
 	fmt.Println(res)
 
-	// 调用invoke方法中的invoke方法，a给b转账10
-	invokeArgs := [][]byte{[]byte("invoke"), []byte("a"), []byte("b"), []byte("10")}
-	res = stub.MockInvoke("1", invokeArgs)
+	invoke = brokerStub.MockInvoke("1", util.ToChaincodeArgs("getOutMessage", "1356:testchain:mychannel&transfer-1356:chain0:mychannel&transfer", "1"))
+	require.Equal(t, shim.OK, int(invoke.Status))
+	fmt.Println(string(invoke.Payload))
+}
+
+func TestDataSwapper(t *testing.T) {
+	dsContract := new(broker.DataSwapper)
+	stub := shimtest.NewMockStub("data_swapper", dsContract)
+
+	// set
+	res := stub.MockInvoke("1", util.ToChaincodeArgs("set", "key", "value"))
+	require.Equal(t, shim.OK, int(res.Status))
 	fmt.Println(res)
 
-	// 再一次调用invoke方法中query方法，查询a的值，此时a的值为90，说明转账成功
-	queryArgs = [][]byte{[]byte("query"), []byte("a")}
-	res = stub.MockInvoke("1", queryArgs)
+	// get
+	res = stub.MockInvoke("1", util.ToChaincodeArgs("get", "key"))
+	require.Equal(t, shim.OK, int(res.Status))
+	fmt.Println(string(res.Payload))
+
+	brokerContract := new(broker.Broker)
+	brokerStub := shimtest.NewMockStub("broker", brokerContract)
+	stub.MockPeerChaincode("broker", brokerStub, "mychannel")
+	brokerStub.MockPeerChaincode("data_swapper", stub, "mychannel")
+	invoke := brokerStub.MockInvoke("1", util.ToChaincodeArgs("initialize", "1356", "testchain"))
+	require.Equal(t, shim.OK, int(invoke.Status))
+
+	res = stub.MockInvoke("1", util.ToChaincodeArgs("get", "1356:chain0:mychannel&data_swapper", "key"))
+	require.Equal(t, shim.OK, int(res.Status))
 	fmt.Println(res)
+
+	invoke = brokerStub.MockInvoke("1", util.ToChaincodeArgs("getOutMessage", "1356:testchain:mychannel&data_swapper-1356:chain0:mychannel&data_swapper", "1"))
+	require.Equal(t, shim.OK, int(invoke.Status))
+	fmt.Println(string(invoke.Payload))
 }

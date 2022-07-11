@@ -282,12 +282,12 @@ func (broker *Broker) initMap(stub shim.ChaincodeStubInterface) error {
 }
 
 func (broker *Broker) EmitInterchainEvent(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	if len(args) != 8 {
-		return shim.Error("incorrect number of arguments, expecting 8")
+	if len(args) != 9 {
+		return shim.Error("incorrect number of arguments, expecting 9")
 	}
 
 	dstServiceID := args[0]
-	curFullID, err := broker.genFullServiceID(stub, "mychannel&data_swapper")
+	curFullID, err := broker.genFullServiceID(stub, args[8])
 	if err != nil {
 		return shim.Error(err.Error())
 	}

@@ -320,7 +320,7 @@ func (broker *Broker) getReceiptMessages(stub shim.ChaincodeStubInterface) (map[
 	if err != nil {
 		return nil, err
 	}
-	messages := make(map[string](map[uint64][]byte))
+	messages := make(map[string]map[uint64][]byte)
 	if err := json.Unmarshal(messagesBytes, &messages); err != nil {
 		return nil, err
 	}
@@ -340,7 +340,7 @@ func (broker *Broker) getOutMessages(stub shim.ChaincodeStubInterface) (map[stri
 	if err != nil {
 		return nil, err
 	}
-	messages := make(map[string](map[uint64]Event))
+	messages := make(map[string]map[uint64]Event)
 	if err := json.Unmarshal(messagesBytes, &messages); err != nil {
 		return nil, err
 	}

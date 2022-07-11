@@ -89,8 +89,10 @@ func (c *Client) Initialize(configPath string, extra []byte) error {
 	fabricConfig := config.Fabric
 	c.appchainID = fabricConfig.AppchainId
 	c.bitxhubID = fabricConfig.BxhId
+	broker.T_stub.MockPeerChaincode("broker", broker.Broker_stub, "mychannel")
 	broker.Ds_stub.MockPeerChaincode("broker", broker.Broker_stub, "mychannel")
 	broker.Broker_stub.MockPeerChaincode("data_swapper", broker.Ds_stub, "mychannel")
+	broker.Broker_stub.MockPeerChaincode("transfer", broker.T_stub, "mychannel")
 	invoke := broker.Broker_stub.MockInvoke("1", util.ToChaincodeArgs("initialize", c.bitxhubID, c.appchainID))
 	if invoke.Status == shim.ERROR {
 		return errors.New(invoke.Message)
@@ -291,10 +293,10 @@ func (c *Client) SubmitIBTP(from string, index uint64, serviceID string, ibtpTyp
 	resp, err := c.InvokeInterchain(from, index, serviceID, uint64(ibtpType), content.Func, content.Args, uint64(proof.TxStatus), proof.MultiSign, isEncrypted)
 	if err != nil {
 		ret.Status = false
-		ret.Message = fmt.Sprintf("invoke interchain foribtp to call %s: %w", content.Func, err)
+		ret.Message = fmt.Sprintf("invoke interchain foribtp to call %s: %s", content.Func, err.Error())
 		return ret, nil
 	}
-	ret.Status = (resp.Status == 200)
+	ret.Status = resp.Status == 200
 	ret.Message = resp.Message
 
 	if c.bitxhubID == "" || c.appchainID == "" {
@@ -319,10 +321,10 @@ func (c *Client) SubmitReceipt(to string, index uint64, serviceID string, ibtpTy
 	resp, err := c.InvokeReceipt(serviceID, to, index, uint64(ibtpType), result.Data, uint64(proof.TxStatus), proof.MultiSign)
 	if err != nil {
 		ret.Status = false
-		ret.Message = fmt.Sprintf("invoke receipt for ibtp to call: %w", err)
+		ret.Message = fmt.Sprintf("invoke receipt for ibtp to call: %s", err.Error())
 		return ret, nil
 	}
-	ret.Status = (resp.Status == shim.OK)
+	ret.Status = resp.Status == shim.OK
 	ret.Message = resp.Message
 
 	return ret, nil
