@@ -17,9 +17,9 @@ var T_stub *shimtest.MockStub
 
 func init() {
 	transfer := new(Transfer)
-
-	T_stub := shimtest.NewMockStub("Transfer", transfer)
-	T_stub.MockInvoke("1", nil)
+	// 获取MockStub对象， 传入名称和链码实体
+	T_stub = shimtest.NewMockStub("Transfer", transfer)
+	T_stub.MockInit("1", nil)
 }
 
 type Transfer struct{}

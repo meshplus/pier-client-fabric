@@ -11,3 +11,4 @@ coverage.txt
 example/contracts/src/broker/vendor/
 example/contracts/src/data_swapper/vendor/
 example/contracts/src/transfer/vendor/
+example/contracts/src/transaction/vendor

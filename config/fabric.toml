@@ -1,4 +1,13 @@
+title = "Fabric"
+
 [fabric]
-bxh_id = "1356"
-appchain_id = "testchain01"
+bxh_id = ""
+appchain_id = "testchain"
 port = "8081"
+
+[mode]
+type = "direct" # relay or direct
+[mode.direct]
+chainId = "chain0"
+serviceId = "0x6DCB3337cd4Ec41d88E62A96123bF3a4E06A7e13"
+timeout_period = 60

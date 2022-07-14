@@ -9,11 +9,13 @@ import (
 
 const (
 	ConfigName = "fabric.toml"
+	DirectMode = "direct"
+	RelayMode  = "relay"
 )
 
 type Config struct {
-	Fabric   Fabric    `toml:"fabric" json:"fabric"`
-	Services []Service `mapstructure:"services" json:"services"`
+	Fabric Fabric `toml:"fabric" json:"fabric"`
+	Mode   Mode   `toml:"mode" json:"mode"`
 }
 type Fabric struct {
 	BxhId      string `toml:"bxh_id" json:"bxh_id" mapstructure:"bxh_id"`
@@ -21,10 +23,16 @@ type Fabric struct {
 	Port       string `toml:"port" json:"port"`
 }
 
-type Service struct {
-	ID   string `toml:"id" json:"id"`
-	Name string `toml:"name" json:"name"`
-	Type string `toml:"type" json:"type"`
+type Mode struct {
+	Type   string `toml:"type" json:"type"`
+	Direct Direct `toml:"direct" json:"direct"`
+}
+
+type Direct struct {
+	ChainID       string `toml:"chainId" json:"chainId"`
+	ServiceID     string `toml:"serviceId" json:"serviceId"`
+	TimeOutPeriod int    `toml:"timeout_period" json:"timeout_period" mapstructure:"timeout_period"`
+	RuleAddr      string `toml:"rule_addr" json:"rule_addr" mapstructure:"rule_addr"`
 }
 
 func DefaultConfig() *Config {
@@ -34,7 +42,15 @@ func DefaultConfig() *Config {
 			AppchainId: "",
 			Port:       "",
 		},
-		Services: nil,
+		Mode: Mode{
+			Type: "",
+			Direct: Direct{
+				ChainID:       "",
+				ServiceID:     "",
+				RuleAddr:      "0x00000000000000000000000000000000000000a2",
+				TimeOutPeriod: 60,
+			},
+		},
 	}
 }
 

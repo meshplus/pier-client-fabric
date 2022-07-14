@@ -31,19 +31,21 @@ var (
 var _ plugins.Client = (*Client)(nil)
 
 const (
-	GetInnerMetaMethod      = "getInnerMeta"       // get last index of each source chain executing tx
-	GetOutMetaMethod        = "getOuterMeta"       // get last index of each receiving chain crosschain event
-	GetCallbackMetaMethod   = "getCallbackMeta"    // get last index of each receiving chain callback tx
-	GetDstRollbackMeta      = "getDstRollbackMeta" // get last index of each receiving chain dst roll back tx
-	GetLocalServices        = "getLocalServices"
-	GetChainId              = "getChainId"
-	GetInMessageMethod      = "getInMessage"
-	GetOutMessageMethod     = "getOutMessage"
-	PollingEventMethod      = "pollingEvent"
-	InvokeInterchainMethod  = "invokeInterchain"
-	InvokeReceiptMethod     = "invokeReceipt"
-	InvokeIndexUpdateMethod = "invokeIndexUpdate"
-	FabricType              = "fabric"
+	GetInnerMetaMethod                   = "getInnerMeta"       // get last index of each source chain executing tx
+	GetOutMetaMethod                     = "getOuterMeta"       // get last index of each receiving chain crosschain event
+	GetCallbackMetaMethod                = "getCallbackMeta"    // get last index of each receiving chain callback tx
+	GetDstRollbackMeta                   = "getDstRollbackMeta" // get last index of each receiving chain dst roll back tx
+	GetLocalServices                     = "getLocalServices"
+	GetChainId                           = "getChainId"
+	GetInMessageMethod                   = "getInMessage"
+	GetOutMessageMethod                  = "getOutMessage"
+	PollingEventMethod                   = "pollingEvent"
+	InvokeInterchainMethod               = "invokeInterchain"
+	InvokeReceiptMethod                  = "invokeReceipt"
+	InvokeIndexUpdateMethod              = "invokeIndexUpdate"
+	InvokeGetDirectTransactionMetaMethod = "getDirectTransactionMeta"
+	InvokerGetAppchainInfoMethod         = "getAppchainInfo"
+	FabricType                           = "fabric"
 )
 
 type ContractMeta struct {
@@ -68,6 +70,20 @@ type Client struct {
 	config        *Config
 }
 
+type DirectTransactionMeta struct {
+	StartTimestamp    int64
+	TransactionStatus uint64
+}
+
+type Appchain struct {
+	Id        string `json:"id"`
+	Broker    string `json:"broker"`
+	TrustRoot string `json:"trustRoot"`
+	RuleAddr  string `json:"ruleAddr"`
+	Status    uint64 `json:"status"`
+	Exist     bool   `json:"exist"`
+}
+
 type Validator struct {
 	Cid      string   `json:"cid"`
 	ChainId  string   `json:"chain_id"`
@@ -89,13 +105,31 @@ func (c *Client) Initialize(configPath string, extra []byte) error {
 	fabricConfig := config.Fabric
 	c.appchainID = fabricConfig.AppchainId
 	c.bitxhubID = fabricConfig.BxhId
-	broker.T_stub.MockPeerChaincode("broker", broker.Broker_stub, "mychannel")
 	broker.Ds_stub.MockPeerChaincode("broker", broker.Broker_stub, "mychannel")
 	broker.Broker_stub.MockPeerChaincode("data_swapper", broker.Ds_stub, "mychannel")
+	broker.T_stub.MockPeerChaincode("broker", broker.Broker_stub, "mychannel")
 	broker.Broker_stub.MockPeerChaincode("transfer", broker.T_stub, "mychannel")
-	invoke := broker.Broker_stub.MockInvoke("1", util.ToChaincodeArgs("initialize", c.bitxhubID, c.appchainID))
-	if invoke.Status == shim.ERROR {
-		return errors.New(invoke.Message)
+	if strings.EqualFold(config.Mode.Type, DirectMode) {
+		broker.Broker_stub.MockPeerChaincode("transaction", broker.Transaction_stub, "mychannel")
+		invoke := broker.Broker_stub.MockInvoke("1", util.ToChaincodeArgs("initialize", c.bitxhubID, c.appchainID, "0"))
+		if invoke.Status == shim.ERROR {
+			return errors.New(invoke.Message)
+		}
+		// registerAppchain
+		res := broker.Broker_stub.MockInvoke("1", util.ToChaincodeArgs("registerAppchain", config.Mode.Direct.ChainID, "mychannel&broker", config.Mode.Direct.RuleAddr, ""))
+		if res.Status == shim.ERROR {
+			return errors.New(res.Message)
+		}
+		// registerRemoteService
+		res = broker.Broker_stub.MockInvoke("1", util.ToChaincodeArgs("registerRemoteService", config.Mode.Direct.ChainID, config.Mode.Direct.ServiceID, ""))
+		if res.Status == shim.ERROR {
+			return errors.New(res.Message)
+		}
+	} else {
+		invoke := broker.Broker_stub.MockInvoke("1", util.ToChaincodeArgs("initialize", c.bitxhubID, c.appchainID, "1"))
+		if invoke.Status == shim.ERROR {
+			return errors.New(invoke.Message)
+		}
 	}
 	server, err := NewValidatorServer(fabricConfig.Port)
 	if err != nil {
@@ -438,6 +472,37 @@ func (c Client) GetCallbackMeta() (map[string]uint64, error) {
 	return c.unpackMap(resp)
 }
 
+func (c *Client) GetDirectTransactionMeta(IBTPid string) (uint64, uint64, uint64, error) {
+	request := channel.Request{
+		ChaincodeID: c.meta.CCID,
+		Fcn:         InvokeGetDirectTransactionMetaMethod,
+		Args:        util.ToChaincodeArgs(InvokeGetDirectTransactionMetaMethod, IBTPid),
+	}
+	resp := broker.Broker_stub.MockInvoke("1", request.Args)
+	if resp.Status != shim.OK {
+		return 0, 0, 0, errors.New(resp.Message)
+	}
+	ret := &DirectTransactionMeta{}
+	if err := json.Unmarshal(resp.Payload, ret); err != nil {
+		return 0, 0, 0, err
+	}
+
+	return uint64(ret.StartTimestamp), uint64(c.config.Mode.Direct.TimeOutPeriod), ret.TransactionStatus, nil
+
+}
+
+func (c *Client) GetOffChainData(request *pb.GetDataRequest) (*pb.GetDataResponse, error) {
+	panic("implement me")
+}
+
+func (c *Client) GetOffChainDataReq() chan *pb.GetDataRequest {
+	panic("implement me")
+}
+
+func (c *Client) SubmitOffChainData(response *pb.GetDataResponse) error {
+	panic("implement me")
+}
+
 func (c *Client) CommitCallback(ibtp *pb.IBTP) error {
 	return nil
 }
@@ -555,7 +620,22 @@ func (c *Client) unpackMap(response peer.Response) (map[string]uint64, error) {
 }
 
 func (c *Client) GetAppchainInfo(chainID string) (string, []byte, string, error) {
-	return "", nil, "", nil
+	request := channel.Request{
+		ChaincodeID: c.meta.CCID,
+		Fcn:         InvokerGetAppchainInfoMethod,
+		Args:        util.ToChaincodeArgs(InvokerGetAppchainInfoMethod, chainID),
+	}
+
+	response := broker.Broker_stub.MockInvoke("1", request.Args)
+	if response.Payload == nil {
+		return "", nil, "", errors.New("err when getAppchainInfo")
+	}
+
+	ret := &Appchain{}
+	if err := json.Unmarshal(response.Payload, ret); err != nil {
+		return "", nil, "", err
+	}
+	return ret.Broker, []byte(ret.TrustRoot), ret.RuleAddr, nil
 }
 
 type handler struct {
