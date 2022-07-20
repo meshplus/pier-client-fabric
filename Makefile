@@ -18,10 +18,10 @@ test-coverage:
 	@cat cover.out >> coverage.txt
 
 ## make fabric1.4: build fabric(1.4) client plugin
-fabric1.4:
+mock:
 	@packr
 	mkdir -p build
-	$(GO) build -o build/fabric-client-1.4 ./*.go
+	$(GO) build -o build/mock-client ./*.go
 
 docker:
 	mkdir -p build

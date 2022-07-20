@@ -1,6 +1,6 @@
-title = "Fabric"
+title = "Mock"
 
-[fabric]
+[appchain]
 bxh_id = ""
 appchain_id = "testchain"
 port = "8081"

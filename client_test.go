@@ -147,6 +147,11 @@ func TestClient_SubmitIBTP(t *testing.T) {
 	err := client.Initialize("./config", nil)
 	require.Nil(t, err)
 
+	// setBalance before transfer
+	invoke := broker.T_stub.MockInvoke("1", util.ToChaincodeArgs("setBalance", "alice", "0"))
+	require.Equal(t, shim.OK, int(invoke.Status))
+	fmt.Println(invoke)
+
 	var args [][]byte
 	args = append(args, []byte("alice"))
 	args = append(args, []byte("alice"))
@@ -163,6 +168,42 @@ func TestClient_SubmitIBTP(t *testing.T) {
 	resp, err := client.SubmitIBTP(":chain0:0x6DCB3337cd4Ec41d88E62A96123bF3a4E06A7e13", 1, "mychannel&transfer", pb.IBTP_INTERCHAIN, content, proof, false)
 	require.Nil(t, err)
 	fmt.Println(resp)
+
+	ibtp, err := client.GetReceiptMessage(":chain0:0x6DCB3337cd4Ec41d88E62A96123bF3a4E06A7e13-:testchain:mychannel&transfer", 1)
+	require.Nil(t, err)
+	fmt.Println(ibtp)
+}
+
+func TestClient_GetDirectTransactionMeta(t *testing.T) {
+	client := &Client{}
+	err := client.Initialize("./config", nil)
+	require.Nil(t, err)
+
+	// setBalance
+	res := broker.T_stub.MockInvoke("1", util.ToChaincodeArgs("setBalance", "alice", "10000"))
+	require.Equal(t, shim.OK, int(res.Status))
+
+	// transfer
+	res = broker.T_stub.MockInvoke("1", util.ToChaincodeArgs("transfer", ":chain0:0x6DCB3337cd4Ec41d88E62A96123bF3a4E06A7e13", "alice", "alice", "100"))
+	require.Equal(t, shim.OK, int(res.Status))
+
+	// getDirectTransactionMeta
+	startTimestamp, timeoutPeriod, transactionStatus, err := client.GetDirectTransactionMeta(":testchain:mychannel&transfer-:chain0:0x6DCB3337cd4Ec41d88E62A96123bF3a4E06A7e13-1")
+	require.Nil(t, err)
+	fmt.Println(startTimestamp)
+	fmt.Println(timeoutPeriod)
+	fmt.Println(transactionStatus)
+}
+
+func TestClient_GetChainID(t *testing.T) {
+	client := &Client{}
+	err := client.Initialize("./config", nil)
+	require.Nil(t, err)
+
+	bxhId, chainId, err := client.GetChainID()
+	require.Nil(t, err)
+	fmt.Println(bxhId)
+	fmt.Println(chainId)
 }
 
 func IntToBytes(n int) []byte {

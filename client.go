@@ -71,8 +71,8 @@ type Client struct {
 }
 
 type DirectTransactionMeta struct {
-	StartTimestamp    int64
-	TransactionStatus uint64
+	StartTimestamp    int64  `json:"start_timestamp"`
+	TransactionStatus uint64 `json:"transaction_status"`
 }
 
 type Appchain struct {
@@ -91,6 +91,12 @@ type Validator struct {
 	ConfByte []string `json:"conf_byte"`
 }
 
+type Receipt struct {
+	Encrypt bool   `json:"encrypt"`
+	Typ     uint64 `json:"type"`
+	Result  []byte `json:"result"`
+}
+
 type CallFunc struct {
 	Func string   `json:"func"`
 	Args [][]byte `json:"args"`
@@ -102,9 +108,9 @@ func (c *Client) Initialize(configPath string, extra []byte) error {
 	if err != nil {
 		return fmt.Errorf("unmarshal config for plugin :%w", err)
 	}
-	fabricConfig := config.Fabric
-	c.appchainID = fabricConfig.AppchainId
-	c.bitxhubID = fabricConfig.BxhId
+	chainConfig := config.Appchain
+	c.appchainID = chainConfig.AppchainId
+	c.bitxhubID = chainConfig.BxhId
 	broker.Ds_stub.MockPeerChaincode("broker", broker.Broker_stub, "mychannel")
 	broker.Broker_stub.MockPeerChaincode("data_swapper", broker.Ds_stub, "mychannel")
 	broker.T_stub.MockPeerChaincode("broker", broker.Broker_stub, "mychannel")
@@ -131,7 +137,7 @@ func (c *Client) Initialize(configPath string, extra []byte) error {
 			return errors.New(invoke.Message)
 		}
 	}
-	server, err := NewValidatorServer(fabricConfig.Port)
+	server, err := NewValidatorServer(chainConfig.Port)
 	if err != nil {
 		return err
 	}
@@ -170,6 +176,7 @@ func (c *Client) Initialize(configPath string, extra []byte) error {
 	done := make(chan bool)
 	c.done = done
 	c.timeoutHeight = 50
+	c.config = config
 
 	if err := server.Start(); err != nil {
 		return err
@@ -425,7 +432,7 @@ func (c *Client) GetOutMessage(servicePair string, idx uint64) (*pb.IBTP, error)
 	return c.unpackIBTP(&resp, pb.IBTP_INTERCHAIN, []byte("1"))
 }
 
-func (c *Client) GetInMessage(servicePair string, index uint64) ([][]byte, []byte, error) {
+func (c *Client) GetInMessage(servicePair string, index uint64) ([]byte, []byte, error) {
 	request := channel.Request{
 		ChaincodeID: c.meta.CCID,
 		Fcn:         GetInMessageMethod,
@@ -433,13 +440,11 @@ func (c *Client) GetInMessage(servicePair string, index uint64) ([][]byte, []byt
 	}
 
 	resp := broker.Broker_stub.MockInvoke("1", request.Args)
-	results := []string{"true"}
-	if resp.Status == shim.ERROR {
-		results = []string{"false"}
+	if resp.Status != shim.OK {
+		return nil, nil, fmt.Errorf(resp.Message)
 	}
-	results = append(results, strings.Split(string(resp.Payload), ",")...)
 
-	return util.ToChaincodeArgs(results...), []byte("1"), nil
+	return resp.Payload, []byte("1"), nil
 }
 
 func (c *Client) GetInMeta() (map[string]uint64, error) {
@@ -486,8 +491,9 @@ func (c *Client) GetDirectTransactionMeta(IBTPid string) (uint64, uint64, uint64
 	if err := json.Unmarshal(resp.Payload, ret); err != nil {
 		return 0, 0, 0, err
 	}
+	fmt.Println(c.config.Mode.Direct.TimeoutPeriod)
 
-	return uint64(ret.StartTimestamp), uint64(c.config.Mode.Direct.TimeOutPeriod), ret.TransactionStatus, nil
+	return uint64(ret.StartTimestamp), uint64(c.config.Mode.Direct.TimeoutPeriod), ret.TransactionStatus, nil
 
 }
 
@@ -508,23 +514,24 @@ func (c *Client) CommitCallback(ibtp *pb.IBTP) error {
 }
 
 func (c *Client) GetReceiptMessage(servicePair string, idx uint64) (*pb.IBTP, error) {
-	var encrypt bool
-
 	result, proof, err := c.GetInMessage(servicePair, idx)
 	if err != nil {
 		return nil, err
 	}
 
-	status, err := strconv.ParseBool(string(result[0]))
-	if err != nil {
+	receipt := &Receipt{}
+	if err := json.Unmarshal(result, receipt); err != nil {
 		return nil, err
 	}
+
+	var argString []string
+	argString = append(argString, strings.Split(string(receipt.Result), ",")...)
 
 	srcServiceID, dstServiceID, err := pb.ParseServicePair(servicePair)
 	if err != nil {
 		return nil, err
 	}
-	return c.generateReceipt(srcServiceID, dstServiceID, idx, result[1:], proof, status, encrypt)
+	return c.generateReceipt(srcServiceID, dstServiceID, receipt.Typ, idx, util.ToChaincodeArgs(argString...), proof, receipt.Encrypt)
 }
 
 func (c *Client) InvokeIndexUpdate(from string, index uint64, serviceId string, category pb.IBTP_Category) (*peer.Response, error) {
