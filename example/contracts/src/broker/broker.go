@@ -89,9 +89,9 @@ type InterchainInvoke struct {
 }
 
 type Receipt struct {
-	Encrypt bool     `json:"encrypt"`
-	Status  bool     `json:"status"`
-	Result  [][]byte `json:"result"`
+	Encrypt bool        `json:"encrypt"`
+	Typ     uint64      `json:"typ"`
+	Result  pb.Response `json:"result"`
 }
 
 type DirectTransactionMeta struct {
@@ -254,7 +254,7 @@ func (broker *Broker) initMap(stub shim.ChaincodeStubInterface) error {
 	locallProposal := make(map[string]proposal)
 	localWhiteByte, err := json.Marshal(localWhite)
 	initOutMessages := make(map[string](map[uint64]Event))
-	initReceiptMessage := make(map[string](map[uint64]pb.Response))
+	initReceiptMessage := make(map[string](map[uint64]Receipt))
 	var validators []string
 	if err != nil {
 		return err
@@ -739,10 +739,10 @@ func (broker *Broker) invokeInterchain(stub shim.ChaincodeStubInterface, args []
 	if err != nil {
 		return errorResponse(fmt.Sprintf("invoke interchain parse index error: %v", err.Error()))
 	}
-	// typ, err := strconv.ParseUint(args[3], 10, 64)
-	// if err != nil {
-	// 	return errorResponse(err.Error())
-	// }
+	typ, err := strconv.ParseUint(args[3], 10, 64)
+	if err != nil {
+		return errorResponse(err.Error())
+	}
 	callFunc := args[4]
 	var callArgs [][]byte
 	if err := json.Unmarshal([]byte(args[5]), &callArgs); err != nil {
@@ -756,10 +756,15 @@ func (broker *Broker) invokeInterchain(stub shim.ChaincodeStubInterface, args []
 	if err := json.Unmarshal([]byte(args[7]), &signatures); err != nil {
 		return errorResponse(fmt.Sprintf("unmarshal signatures failed for %s", args[7]))
 	}
-	// isEncrypt, err := strconv.ParseUint(args[8], 10, 64)
+	isEncrypt, err := strconv.ParseBool(args[8])
 	// if err != nil {
 	// 	return errorResponse(err.Error())
 	// }
+
+	threshold, err := broker.getValThreshold(stub)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
 
 	dstFullID, err := broker.genFullServiceID(stub, destAddr)
 	if err != nil {
@@ -776,17 +781,20 @@ func (broker *Broker) invokeInterchain(stub shim.ChaincodeStubInterface, args []
 	// }
 
 	var ccArgs [][]byte
+	var receipt Receipt
 	var response pb.Response
 	ccArgs = append(ccArgs, []byte(callFunc))
 	ccArgs = append(ccArgs, callArgs...)
 	if txStatus == 0 {
 		ccArgs = append(ccArgs, []byte("false"))
 		response = stub.InvokeChaincode(splitedCID[1], ccArgs, splitedCID[0])
-		if response.Status != shim.OK {
-			return errorResponse(fmt.Sprintf("invoke chaincode '%s' function %s err: %s", splitedCID[1], callFunc, response.Message))
-		}
 		if err := broker.updateIndex(stub, srcFullID, dstFullID, index, 0); err != nil {
 			return errorResponse(err.Error())
+		}
+		if response.Status == shim.OK {
+			typ = 1
+		} else {
+			typ = 2
 		}
 	} else {
 		ccArgs = append(ccArgs, []byte("true"))
@@ -800,17 +808,29 @@ func (broker *Broker) invokeInterchain(stub shim.ChaincodeStubInterface, args []
 		if err := broker.updateIndex(stub, srcFullID, dstFullID, index, 2); err != nil {
 			return errorResponse(err.Error())
 		}
+		if threshold == 0 {
+			typ = 4
+		} else {
+			if txStatus == 1 {
+				typ = 2
+			} else {
+				typ = 3
+			}
+		}
 	}
 
+	receipt.Encrypt = isEncrypt
+	receipt.Typ = typ
+	receipt.Result = response
 	receipts, err := broker.getReceiptMessages(stub)
 	if err != nil {
 		return errorResponse(err.Error())
 	}
 	_, ok := receipts[ServicePair]
 	if !ok {
-		receipts[ServicePair] = make(map[uint64]pb.Response)
+		receipts[ServicePair] = make(map[uint64]Receipt)
 	}
-	receipts[ServicePair][index] = response
+	receipts[ServicePair][index] = receipt
 	if err := broker.setReceiptMessages(stub, receipts); err != nil {
 		return errorResponse(err.Error())
 	}

@@ -99,6 +99,12 @@ type Appchain struct {
 	Exist     bool   `json:"exist"`
 }
 
+type Receipt struct {
+	Encrypt bool          `json:"encrypt"`
+	Typ     uint64        `json:"typ"`
+	Result  peer.Response `json:"result"`
+}
+
 func (c *Client) Initialize(configPath string, extra []byte) error {
 	eventC := make(chan *pb.IBTP)
 	config, err := UnmarshalConfig(configPath)
@@ -510,7 +516,7 @@ func (c *Client) GetOutMessage(servicePair string, idx uint64) (*pb.IBTP, error)
 	return c.unpackIBTP(&response, pb.IBTP_INTERCHAIN, proof)
 }
 
-func (c *Client) GetInMessage(servicePair string, index uint64) ([][]byte, []byte, error) {
+func (c *Client) GetInMessage(servicePair string, index uint64) ([][]byte, []byte, bool, uint64, error) {
 	request := channel.Request{
 		ChaincodeID: c.meta.CCID,
 		Fcn:         GetInMessageMethod,
@@ -520,26 +526,26 @@ func (c *Client) GetInMessage(servicePair string, index uint64) ([][]byte, []byt
 	var response channel.Response
 	response, err := c.consumer.ChannelClient.Execute(request)
 	if err != nil {
-		return nil, nil, fmt.Errorf("execute req: %w", err)
+		return nil, nil, false, 0, fmt.Errorf("execute req: %w", err)
 	}
 
-	resp := &peer.Response{}
+	resp := &Receipt{}
 	if err := json.Unmarshal(response.Payload, resp); err != nil {
-		return nil, nil, err
+		return nil, nil, false, 0, err
 	}
 
 	results := []string{"true"}
-	if resp.Status == shim.ERROR {
+	if resp.Result.Status == shim.ERROR {
 		results = []string{"false"}
 	}
-	results = append(results, strings.Split(string(resp.Payload), ",")...)
+	results = append(results, strings.Split(string(resp.Result.Payload), ",")...)
 
 	proof, err := c.getProof(response)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, false, 0, err
 	}
 
-	return util.ToChaincodeArgs(results...), proof, nil
+	return util.ToChaincodeArgs(results...), proof, resp.Encrypt, resp.Typ, nil
 }
 
 func (c *Client) GetInMeta() (map[string]uint64, error) {
@@ -594,7 +600,7 @@ func (c *Client) CommitCallback(ibtp *pb.IBTP) error {
 func (c *Client) GetReceiptMessage(servicePair string, idx uint64) (*pb.IBTP, error) {
 	var encrypt bool
 
-	result, proof, err := c.GetInMessage(servicePair, idx)
+	result, proof, encrypt, typ, err := c.GetInMessage(servicePair, idx)
 	if err != nil {
 		return nil, err
 	}
@@ -608,7 +614,7 @@ func (c *Client) GetReceiptMessage(servicePair string, idx uint64) (*pb.IBTP, er
 	if err != nil {
 		return nil, err
 	}
-	return c.generateReceipt(srcServiceID, dstServiceID, idx, result[1:], proof, status, encrypt)
+	return c.generateReceipt(srcServiceID, dstServiceID, idx, result[1:], proof, status, encrypt, typ)
 }
 
 func (c *Client) InvokeIndexUpdate(from string, index uint64, serviceId string, category pb.IBTP_Category) (*channel.Response, *Response, error) {
