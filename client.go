@@ -175,7 +175,7 @@ func (c *Client) Initialize(configPath string, extra []byte) error {
 	c.ticker = time.NewTicker(15 * time.Second)
 	done := make(chan bool)
 	c.done = done
-	c.timeoutHeight = 50
+	c.timeoutHeight = config.Mode.Relay.TimeoutHeight
 	c.config = config
 
 	if err := server.Start(); err != nil {

@@ -26,6 +26,7 @@ type AppchainInfo struct {
 type Mode struct {
 	Type   string `toml:"type" json:"type"`
 	Direct Direct `toml:"direct" json:"direct"`
+	Relay  Relay  `toml:"relay" json:"relay"`
 }
 
 type Direct struct {
@@ -33,6 +34,10 @@ type Direct struct {
 	ServiceID     string `toml:"serviceId" json:"serviceId"`
 	TimeoutPeriod int    `toml:"timeout_period" json:"timeout_period" mapstructure:"timeout_period"`
 	RuleAddr      string `toml:"rule_addr" json:"rule_addr" mapstructure:"rule_addr"`
+}
+
+type Relay struct {
+	TimeoutHeight int64 `toml:"timeout_height" json:"timeout_height" mapstructure:"timeout_height"`
 }
 
 func DefaultConfig() *Config {
@@ -49,6 +54,9 @@ func DefaultConfig() *Config {
 				ServiceID:     "",
 				RuleAddr:      "0x00000000000000000000000000000000000000a2",
 				TimeoutPeriod: 60,
+			},
+			Relay: Relay{
+				TimeoutHeight: 50,
 			},
 		},
 	}

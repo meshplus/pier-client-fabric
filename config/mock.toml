@@ -7,6 +7,9 @@ port = "8081"
 
 [mode]
 type = "direct" # relay or direct
+[mode.relay]
+timeout_height = 50
+
 [mode.direct]
 chainId = "chain0"
 serviceId = "0x6DCB3337cd4Ec41d88E62A96123bF3a4E06A7e13"
