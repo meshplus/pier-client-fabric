@@ -757,9 +757,9 @@ func (broker *Broker) invokeInterchain(stub shim.ChaincodeStubInterface, args []
 		return errorResponse(fmt.Sprintf("unmarshal signatures failed for %s", args[7]))
 	}
 	isEncrypt, err := strconv.ParseBool(args[8])
-	// if err != nil {
-	// 	return errorResponse(err.Error())
-	// }
+	if err != nil {
+		return errorResponse(err.Error())
+	}
 
 	threshold, err := broker.getValThreshold(stub)
 	if err != nil {
