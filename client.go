@@ -190,16 +190,16 @@ func (c *Client) polling() {
 						SourceReceiptCounter:    make(map[string]uint64),
 					}
 					c.serviceMeta[srcChainServiceID] = meta
-					ibtp, err := c.GetOutMessage(servicePair, index)
-					if err != nil {
-						logger.Error("Polling out message",
-							"servicePair", servicePair,
-							"index", index,
-							"error", err.Error())
-						continue
-					}
+					// ibtp, err := c.GetOutMessage(servicePair, index)
+					// if err != nil {
+					// 	logger.Error("Polling out message",
+					// 		"servicePair", servicePair,
+					// 		"index", index,
+					// 		"error", err.Error())
+					// 	continue
+					// }
 
-					c.eventC <- ibtp
+					// c.eventC <- ibtp
 					meta.InterchainCounter[dstChainServiceID] = index
 					continue
 				}
