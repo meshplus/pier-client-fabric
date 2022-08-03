@@ -34,19 +34,21 @@ var (
 var _ plugins.Client = (*Client)(nil)
 
 const (
-	GetInnerMetaMethod      = "getInnerMeta"       // get last index of each source chain executing tx
-	GetOutMetaMethod        = "getOuterMeta"       // get last index of each receiving chain crosschain event
-	GetCallbackMetaMethod   = "getCallbackMeta"    // get last index of each receiving chain callback tx
-	GetDstRollbackMeta      = "getDstRollbackMeta" // get last index of each receiving chain dst roll back tx
-	GetLocalServices        = "getLocalServices"
-	GetChainId              = "getChainId"
-	GetInMessageMethod      = "getInMessage"
-	GetOutMessageMethod     = "getOutMessage"
-	PollingEventMethod      = "pollingEvent"
-	InvokeInterchainMethod  = "invokeInterchain"
-	InvokeReceiptMethod     = "invokeReceipt"
-	InvokeIndexUpdateMethod = "invokeIndexUpdate"
-	FabricType              = "fabric"
+	GetInnerMetaMethod                   = "getInnerMeta"       // get last index of each source chain executing tx
+	GetOutMetaMethod                     = "getOuterMeta"       // get last index of each receiving chain crosschain event
+	GetCallbackMetaMethod                = "getCallbackMeta"    // get last index of each receiving chain callback tx
+	GetDstRollbackMeta                   = "getDstRollbackMeta" // get last index of each receiving chain dst roll back tx
+	GetLocalServices                     = "getLocalServices"
+	GetChainId                           = "getChainId"
+	GetInMessageMethod                   = "getInMessage"
+	GetOutMessageMethod                  = "getOutMessage"
+	PollingEventMethod                   = "pollingEvent"
+	InvokeInterchainMethod               = "invokeInterchain"
+	InvokeReceiptMethod                  = "invokeReceipt"
+	InvokeIndexUpdateMethod              = "invokeIndexUpdate"
+	InvokeGetDirectTransactionMetaMethod = "getDirectTransactionMeta"
+	InvokerGetAppchainInfoMethod         = "getAppchainInfo"
+	FabricType                           = "fabric"
 )
 
 type ContractMeta struct {
@@ -55,6 +57,11 @@ type ContractMeta struct {
 	CCID        string `json:"ccid"`
 	ChannelID   string `json:"channel_id"`
 	ORG         string `json:"org"`
+}
+
+type DirectTransactionMeta struct {
+	StartTimestamp    int64  `json:"start_timestamp"`
+	TransactionStatus uint64 `json:"transaction_status"`
 }
 
 type Client struct {
@@ -81,6 +88,21 @@ type Validator struct {
 type CallFunc struct {
 	Func string   `json:"func"`
 	Args [][]byte `json:"args"`
+}
+
+type Appchain struct {
+	Id        string `json:"id"`
+	Broker    string `json:"broker"`
+	TrustRoot string `json:"trustRoot"`
+	RuleAddr  string `json:"ruleAddr"`
+	Status    uint64 `json:"status"`
+	Exist     bool   `json:"exist"`
+}
+
+type Receipt struct {
+	Encrypt bool          `json:"encrypt"`
+	Typ     uint64        `json:"typ"`
+	Result  peer.Response `json:"result"`
 }
 
 func (c *Client) Initialize(configPath string, extra []byte) error {
@@ -352,6 +374,28 @@ func (c *Client) SubmitReceipt(to string, index uint64, serviceID string, ibtpTy
 	return ret, nil
 }
 
+func (c *Client) GetDirectTransactionMeta(IBTPid string) (uint64, uint64, uint64, error) {
+
+	args := util.ToChaincodeArgs(IBTPid)
+	request := channel.Request{
+		ChaincodeID: c.meta.CCID,
+		Fcn:         InvokeGetDirectTransactionMetaMethod,
+		Args:        args,
+	}
+	var response channel.Response
+	response, err := c.consumer.ChannelClient.Execute(request)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	ret := &DirectTransactionMeta{}
+	if err := json.Unmarshal(response.Payload, ret); err != nil {
+		return 0, 0, 0, err
+	}
+
+	return uint64(ret.StartTimestamp), c.config.Fabric.TimeoutPeriod, ret.TransactionStatus, nil
+
+}
+
 func (c *Client) InvokeInterchain(srcFullID string, index uint64, destAddr string, reqType uint64, callFunc string, callArgs [][]byte, txStatus uint64, multiSign [][]byte, encrypt bool) (*channel.Response, *Response, error) {
 	callArgsBytes, err := json.Marshal(callArgs)
 	if err != nil {
@@ -472,7 +516,7 @@ func (c *Client) GetOutMessage(servicePair string, idx uint64) (*pb.IBTP, error)
 	return c.unpackIBTP(&response, pb.IBTP_INTERCHAIN, proof)
 }
 
-func (c *Client) GetInMessage(servicePair string, index uint64) ([][]byte, []byte, error) {
+func (c *Client) GetInMessage(servicePair string, index uint64) ([][]byte, []byte, bool, uint64, error) {
 	request := channel.Request{
 		ChaincodeID: c.meta.CCID,
 		Fcn:         GetInMessageMethod,
@@ -482,26 +526,26 @@ func (c *Client) GetInMessage(servicePair string, index uint64) ([][]byte, []byt
 	var response channel.Response
 	response, err := c.consumer.ChannelClient.Execute(request)
 	if err != nil {
-		return nil, nil, fmt.Errorf("execute req: %w", err)
+		return nil, nil, false, 0, fmt.Errorf("execute req: %w", err)
 	}
 
-	resp := &peer.Response{}
+	resp := &Receipt{}
 	if err := json.Unmarshal(response.Payload, resp); err != nil {
-		return nil, nil, err
+		return nil, nil, false, 0, err
 	}
 
 	results := []string{"true"}
-	if resp.Status == shim.ERROR {
+	if resp.Result.Status == shim.ERROR {
 		results = []string{"false"}
 	}
-	results = append(results, strings.Split(string(resp.Payload), ",")...)
+	results = append(results, strings.Split(string(resp.Result.Payload), ",")...)
 
 	proof, err := c.getProof(response)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, false, 0, err
 	}
 
-	return util.ToChaincodeArgs(results...), proof, nil
+	return util.ToChaincodeArgs(results...), proof, resp.Encrypt, resp.Typ, nil
 }
 
 func (c *Client) GetInMeta() (map[string]uint64, error) {
@@ -556,7 +600,7 @@ func (c *Client) CommitCallback(ibtp *pb.IBTP) error {
 func (c *Client) GetReceiptMessage(servicePair string, idx uint64) (*pb.IBTP, error) {
 	var encrypt bool
 
-	result, proof, err := c.GetInMessage(servicePair, idx)
+	result, proof, encrypt, typ, err := c.GetInMessage(servicePair, idx)
 	if err != nil {
 		return nil, err
 	}
@@ -570,7 +614,7 @@ func (c *Client) GetReceiptMessage(servicePair string, idx uint64) (*pb.IBTP, er
 	if err != nil {
 		return nil, err
 	}
-	return c.generateReceipt(srcServiceID, dstServiceID, idx, result[1:], proof, status, encrypt)
+	return c.generateReceipt(srcServiceID, dstServiceID, idx, result[1:], proof, status, encrypt, typ)
 }
 
 func (c *Client) InvokeIndexUpdate(from string, index uint64, serviceId string, category pb.IBTP_Category) (*channel.Response, *Response, error) {
@@ -684,7 +728,22 @@ func (c *Client) unpackMap(response channel.Response) (map[string]uint64, error)
 }
 
 func (c *Client) GetAppchainInfo(chainID string) (string, []byte, string, error) {
-	return "", nil, "", nil
+	args := util.ToChaincodeArgs(chainID)
+	request := channel.Request{
+		ChaincodeID: c.meta.CCID,
+		Fcn:         InvokerGetAppchainInfoMethod,
+		Args:        args,
+	}
+	var response channel.Response
+	response, err := c.consumer.ChannelClient.Execute(request)
+	if err != nil {
+		return "", nil, "", err
+	}
+	ret := &Appchain{}
+	if err := json.Unmarshal(response.Payload, ret); err != nil {
+		return "", nil, "", err
+	}
+	return ret.Broker, []byte(ret.TrustRoot), ret.RuleAddr, nil
 }
 
 type handler struct {
@@ -732,4 +791,19 @@ func parseServicePair(servicePair string) (string, string, error) {
 
 func genServicePair(from, to string) string {
 	return fmt.Sprintf("%s-%s", from, to)
+}
+
+func (c *Client) GetOffChainData(request *pb.GetDataRequest) (*pb.GetDataResponse, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *Client) GetOffChainDataReq() chan *pb.GetDataRequest {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *Client) SubmitOffChainData(response *pb.GetDataResponse) error {
+	//TODO implement me
+	panic("implement me")
 }

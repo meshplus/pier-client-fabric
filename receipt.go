@@ -5,7 +5,7 @@ import (
 	"github.com/meshplus/bitxhub-model/pb"
 )
 
-func (c *Client) generateReceipt(from, to string, idx uint64, args [][]byte, proof []byte, status, encrypt bool) (*pb.IBTP, error) {
+func (c *Client) generateReceipt(from, to string, idx uint64, args [][]byte, proof []byte, status, encrypt bool, typ uint64) (*pb.IBTP, error) {
 	result := &pb.Result{Data: args}
 	content, err := result.Marshal()
 	if err != nil {
@@ -27,17 +27,11 @@ func (c *Client) generateReceipt(from, to string, idx uint64, args [][]byte, pro
 	if err != nil {
 		return nil, err
 	}
-
-	typ := pb.IBTP_RECEIPT_SUCCESS
-	if !status {
-		typ = pb.IBTP_RECEIPT_FAILURE
-	}
-
 	return &pb.IBTP{
 		From:          from,
 		To:            to,
 		Index:         idx,
-		Type:          typ,
+		Type:          pb.IBTP_Type(typ),
 		TimeoutHeight: 0,
 		Proof:         proof,
 		Payload:       pd,
