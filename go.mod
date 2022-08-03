@@ -5,7 +5,7 @@ go 1.13
 require (
 	github.com/Rican7/retry v0.1.0
 	github.com/cloudflare/cfssl v0.0.0-20190409034051-768cd563887f
-	github.com/ethereum/go-ethereum v1.10.4
+	github.com/ethereum/go-ethereum v1.10.17
 	github.com/fatih/color v1.9.0
 	github.com/gin-gonic/gin v1.7.4
 	github.com/gobuffalo/packd v1.0.0
