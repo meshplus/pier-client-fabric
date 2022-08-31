@@ -44,6 +44,7 @@ const (
 	GetOutMessageMethod                  = "getOutMessage"
 	PollingEventMethod                   = "pollingEvent"
 	InvokeInterchainMethod               = "invokeInterchain"
+	InvokeInterchainsMethod              = "invokeInterchains"
 	InvokeReceiptMethod                  = "invokeReceipt"
 	InvokeIndexUpdateMethod              = "invokeIndexUpdate"
 	InvokeGetDirectTransactionMetaMethod = "getDirectTransactionMeta"
@@ -105,7 +106,7 @@ type Receipt struct {
 	Result  peer.Response `json:"result"`
 }
 
-func (c *Client) Initialize(configPath string, extra []byte) error {
+func (c *Client) Initialize(configPath string, extra []byte, mode string) error {
 	eventC := make(chan *pb.IBTP)
 	config, err := UnmarshalConfig(configPath)
 	if err != nil {
@@ -331,6 +332,39 @@ func (c *Client) GetIBTPCh() chan *pb.IBTP {
 	return c.eventC
 }
 
+func (c *Client) SubmitReceiptBatch(to []string, index []uint64, serviceID []string, ibtpType []pb.IBTP_Type, result []*pb.Result, proof []*pb.BxhProof) (*pb.SubmitIBTPResponse, error) {
+	panic("implement me")
+}
+
+func (c *Client) SubmitIBTPBatch(from []string, index []uint64, serviceID []string, ibtpType []pb.IBTP_Type, content []*pb.Content, proof []*pb.BxhProof, isEncrypted []bool) (*pb.SubmitIBTPResponse, error) {
+	ret := &pb.SubmitIBTPResponse{Status: true}
+	var (
+		callFunc []string
+		args     [][][]byte
+		typ      []uint64
+		txStatus []uint64
+		sign     [][][]byte
+	)
+	for idx, ct := range content {
+		callFunc = append(callFunc, ct.Func)
+		args = append(args, ct.Args)
+		typ = append(typ, uint64(ibtpType[idx]))
+		txStatus = append(txStatus, uint64(proof[idx].TxStatus))
+		sign = append(sign, proof[idx].MultiSign)
+	}
+
+	_, resp, err := c.InvokeInterchains(from, index, serviceID, typ, callFunc, args, txStatus, sign, isEncrypted)
+	if err != nil {
+		ret.Status = false
+		ret.Message = fmt.Sprintf("invoke interchains failed: %s", err.Error())
+		return ret, nil
+	}
+	ret.Status = resp.OK
+	ret.Message = resp.Message
+
+	return ret, nil
+}
+
 func (c *Client) SubmitIBTP(from string, index uint64, serviceID string, ibtpType pb.IBTP_Type, content *pb.Content, proof *pb.BxhProof, isEncrypted bool) (*pb.SubmitIBTPResponse, error) {
 	ret := &pb.SubmitIBTPResponse{Status: true}
 
@@ -394,6 +428,84 @@ func (c *Client) GetDirectTransactionMeta(IBTPid string) (uint64, uint64, uint64
 
 	return uint64(ret.StartTimestamp), c.config.Fabric.TimeoutPeriod, ret.TransactionStatus, nil
 
+}
+
+func (c *Client) InvokeInterchains(srcFullID []string, index []uint64, destAddr []string, reqType []uint64, callFunc []string, callArgs [][][]byte, txStatus []uint64, multiSign [][][]byte, encrypt []bool) (*channel.Response, *Response, error) {
+	srcFullIDBytes, err := json.Marshal(srcFullID)
+	if err != nil {
+		return nil, nil, err
+	}
+	indexBytes, err := json.Marshal(index)
+	if err != nil {
+		return nil, nil, err
+	}
+	destAddrBytes, err := json.Marshal(destAddr)
+	if err != nil {
+		return nil, nil, err
+	}
+	reqTypeBytes, err := json.Marshal(reqType)
+	if err != nil {
+		return nil, nil, err
+	}
+	callFuncBytes, err := json.Marshal(callFunc)
+	if err != nil {
+		return nil, nil, err
+	}
+	callArgsBytes, err := json.Marshal(callArgs)
+	if err != nil {
+		return nil, nil, err
+	}
+	txStatusBytes, err := json.Marshal(txStatus)
+	if err != nil {
+		return nil, nil, err
+	}
+	multiSignBytes, err := json.Marshal(multiSign)
+	if err != nil {
+		return nil, nil, err
+	}
+	encryptBytes, err := json.Marshal(encrypt)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	args := util.ToChaincodeArgs(string(srcFullIDBytes), string(indexBytes), string(destAddrBytes), string(reqTypeBytes), string(callFuncBytes),
+		string(callArgsBytes), string(txStatusBytes), string(multiSignBytes), string(encryptBytes))
+
+	request := channel.Request{
+		ChaincodeID: c.meta.CCID,
+		Fcn:         InvokeInterchainsMethod,
+		Args:        args,
+	}
+
+	// retry executing
+	var res channel.Response
+	if err := retry.Retry(func(attempt uint) error {
+		res, err = c.consumer.ChannelClient.Execute(request)
+		if err != nil {
+			if strings.Contains(err.Error(), "Chaincode status Code: (500)") {
+				res.ChaincodeStatus = shim.ERROR
+				logger.Error("execute request failed", "err", err.Error())
+				return nil
+			}
+			return fmt.Errorf("execute request: %w", err)
+		}
+
+		return nil
+	}, strategy.Wait(2*time.Second)); err != nil {
+		logger.Error("Can't send rollback ibtp back to bitxhub", "error", err.Error())
+	}
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	logger.Info("response", "cc status", strconv.Itoa(int(res.ChaincodeStatus)), "payload", string(res.Payload))
+	response := &Response{}
+	if err := json.Unmarshal(res.Payload, response); err != nil {
+		return nil, nil, err
+	}
+
+	return &res, response, nil
 }
 
 func (c *Client) InvokeInterchain(srcFullID string, index uint64, destAddr string, reqType uint64, callFunc string, callArgs [][]byte, txStatus uint64, multiSign [][]byte, encrypt bool) (*channel.Response, *Response, error) {

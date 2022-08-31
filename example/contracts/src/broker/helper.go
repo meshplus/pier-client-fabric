@@ -254,6 +254,29 @@ func (broker *Broker) putLocalWhiteList(stub shim.ChaincodeStubInterface, localW
 	return stub.PutState(localWhitelist, localWhiteByte)
 }
 
+func (broker *Broker) getServiceOrderedList(stub shim.ChaincodeStubInterface) (map[string]bool, error) {
+	serviceOrderedByte, err := stub.GetState(serviceOrderedList)
+	if err != nil {
+		return nil, err
+	}
+	serviceOrdered := make(map[string]bool)
+	if serviceOrderedByte == nil {
+		return serviceOrdered, nil
+	}
+	if err := json.Unmarshal(serviceOrderedByte, &serviceOrdered); err != nil {
+		return nil, err
+	}
+	return serviceOrdered, nil
+}
+
+func (broker *Broker) putServiceOrderedList(stub shim.ChaincodeStubInterface, serviceOrdered map[string]bool) error {
+	serviceOrderedByte, err := json.Marshal(serviceOrdered)
+	if err != nil {
+		return err
+	}
+	return stub.PutState(serviceOrderedList, serviceOrderedByte)
+}
+
 func (broker *Broker) getRemoteWhiteList(stub shim.ChaincodeStubInterface) (map[string][]string, error) {
 	remoteWhiteByte, err := stub.GetState(remoteWhitelist)
 	if err != nil {

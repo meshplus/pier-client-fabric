@@ -19,8 +19,8 @@ require (
 	github.com/hyperledger/fabric-protos-go v0.0.0-20201028172056-a3136dde2354
 	github.com/hyperledger/fabric-sdk-go v1.0.0-beta1.0.20200106161850-8f3d32c9d1a6
 	github.com/meshplus/bitxhub-kit v1.2.1-0.20220412092457-5836414df781
-	github.com/meshplus/bitxhub-model v1.2.1-0.20220419071920-bd5cc4a17768
-	github.com/meshplus/pier v1.20.1-0.20220419073952-9a768c4da392
+	github.com/meshplus/bitxhub-model v1.2.1-0.20220803022708-9ab7a71abdbf
+	github.com/meshplus/pier v1.24.1-0.20220803023357-8533944f0d08
 	github.com/spf13/viper v1.7.1
 	github.com/urfave/cli v1.22.1
 )
