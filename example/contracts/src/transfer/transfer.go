@@ -31,7 +31,7 @@ func (t *Transfer) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	fmt.Printf("invoke: %s\n", function)
 	switch function {
 	case "register":
-		return t.register(stub)
+		return t.register(stub, args)
 	case "transfer":
 		return t.transfer(stub, args)
 	case "getBalance":
@@ -47,9 +47,12 @@ func (t *Transfer) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	}
 }
 
-func (t *Transfer) register(stub shim.ChaincodeStubInterface) pb.Response {
-	args := util.ToChaincodeArgs("register")
-	response := stub.InvokeChaincode(brokerContractName, args, channelID)
+func (t *Transfer) register(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	if len(args) != 1 {
+		shim.Error("incorrect number of arguments, expecting 1")
+	}
+	invokeArgs := util.ToChaincodeArgs("register", args[0])
+	response := stub.InvokeChaincode(brokerContractName, invokeArgs, channelID)
 	if response.Status != shim.OK {
 		return shim.Error(fmt.Sprintf("invoke chaincode '%s' err: %s", brokerContractName, response.Message))
 	}

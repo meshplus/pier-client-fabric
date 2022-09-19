@@ -25,6 +25,7 @@ const (
 	remoteWhitelist         = "remote-whitelist"
 	localServices           = "local-services"
 	localServiceProposal    = "local-service-proposal"
+	serviceOrderedList      = "service-ordered-list"
 	whiteList               = "white-list"
 	adminList               = "admin-list"
 	localServiceList        = "local-service-list"
@@ -78,6 +79,7 @@ type proposal struct {
 	Approve     uint64   `json:"approve"`
 	Reject      uint64   `json:"reject"`
 	VotedAdmins []string `json:"voted_admins"`
+	Ordered     bool     `json:"ordered"`
 	Exist       bool     `json:"exist"`
 }
 
@@ -155,7 +157,7 @@ func (broker *Broker) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	fmt.Printf("invoke: %s\n", function)
 	switch function {
 	case "register":
-		return broker.register(stub)
+		return broker.register(stub, args)
 	case "audit":
 		return broker.audit(stub, args)
 	case "getInnerMeta":
@@ -182,6 +184,8 @@ func (broker *Broker) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		return broker.initialize(stub, args)
 	case "invokeInterchain":
 		return broker.invokeInterchain(stub, args)
+	case "invokeInterchains":
+		return broker.invokeInterchains(stub, args)
 	case "invokeReceipt":
 		return broker.invokeReceipt(stub, args)
 	case "invokeIndexUpdate":
@@ -255,6 +259,7 @@ func (broker *Broker) initMap(stub shim.ChaincodeStubInterface) error {
 	localWhiteByte, err := json.Marshal(localWhite)
 	initOutMessages := make(map[string](map[uint64]Event))
 	initReceiptMessage := make(map[string](map[uint64]Receipt))
+	serviceOrdered := make(map[string]bool)
 	var validators []string
 	if err != nil {
 		return err
@@ -264,6 +269,10 @@ func (broker *Broker) initMap(stub shim.ChaincodeStubInterface) error {
 		return err
 	}
 	locallProposalByte, err := json.Marshal(locallProposal)
+	if err != nil {
+		return err
+	}
+	serviceOrderedByte, err := json.Marshal(serviceOrdered)
 	if err != nil {
 		return err
 	}
@@ -305,6 +314,9 @@ func (broker *Broker) initMap(stub shim.ChaincodeStubInterface) error {
 	}
 
 	if err := broker.setReceiptMessages(stub, initReceiptMessage); err != nil {
+		return err
+	}
+	if err := stub.PutState(serviceOrderedList, serviceOrderedByte); err != nil {
 		return err
 	}
 
@@ -462,7 +474,12 @@ func (broker *Broker) EmitInterchainEvent(stub shim.ChaincodeStubInterface, args
 }
 
 // 业务合约通过该接口进行注册: 0表示正在审核，1表示审核通过，2表示审核失败
-func (broker *Broker) register(stub shim.ChaincodeStubInterface) pb.Response {
+func (broker *Broker) register(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	ordered, err := strconv.ParseBool(args[0])
+	if err != nil {
+		return errorResponse(fmt.Sprintf("cannot parse %s to bool", args[0]))
+	}
+
 	localWhite, err := broker.getLocalWhiteList(stub)
 	if err != nil {
 		return shim.Error(fmt.Sprintf("Get local white list :%s", err.Error()))
@@ -486,6 +503,7 @@ func (broker *Broker) register(stub shim.ChaincodeStubInterface) pb.Response {
 		Approve:     0,
 		Reject:      0,
 		VotedAdmins: votedAdmins,
+		Ordered:     ordered,
 		Exist:       true,
 	}
 	localProposal[key] = proposal
@@ -550,6 +568,14 @@ func (broker *Broker) audit(stub shim.ChaincodeStubInterface, args []string) pb.
 		}
 		localService = append(localService, getKey(channel, chaincodeName))
 		if err := broker.putLocalServiceList(stub, localService); err != nil {
+			return shim.Error(err.Error())
+		}
+		serviceOrdered, err := broker.getServiceOrderedList(stub)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		serviceOrdered[getKey(channel, chaincodeName)] = proposal.Ordered
+		if err = broker.putServiceOrderedList(stub, serviceOrdered); err != nil {
 			return shim.Error(err.Error())
 		}
 	}
@@ -721,6 +747,71 @@ func (broker *Broker) genFullServiceID(stub shim.ChaincodeStubInterface, service
 
 func genServicePair(from, to string) string {
 	return fmt.Sprintf("%s-%s", from, to)
+}
+
+func (broker *Broker) invokeInterchains(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	if len(args) != 9 {
+		return errorResponse("incorrect number of arguments, expecting 9")
+	}
+
+	var (
+		srcFullID   []string
+		targetCID   []string
+		index       []uint64
+		typ         []uint64
+		callFunc    []string
+		callArgs    [][][]byte
+		txStatus    []uint64
+		signature   [][][]byte
+		isEncrypted []bool
+	)
+
+	for _, arg := range args {
+		if err := json.Unmarshal([]byte(arg), &srcFullID); err != nil {
+			return errorResponse(fmt.Sprintf("unmarshal args failed for %s", arg))
+		}
+	}
+
+	for idx := 0; idx < 9; idx++ {
+		serviceOrdered, err := broker.getServiceOrderedList(stub)
+		if err != nil {
+			return errorResponse(fmt.Sprintf("get service orered list failed: %s", err.Error()))
+		}
+		ordered, ok := serviceOrdered[targetCID[idx]]
+		if !ok {
+			return errorResponse(fmt.Sprintf("cannot get service ordered"))
+		}
+		if ordered {
+			return errorResponse(fmt.Sprintf("dst service is not ordered"))
+		}
+
+		callArgsBytes, err := json.Marshal(callArgs[idx])
+		if err != nil {
+			return errorResponse(err.Error())
+		}
+		signatureBytes, err := json.Marshal(signature[idx])
+		if err != nil {
+			return errorResponse(err.Error())
+		}
+
+		var invokeArgs []string
+		invokeArgs = append(invokeArgs, srcFullID[idx])
+		invokeArgs = append(invokeArgs, targetCID[idx])
+		invokeArgs = append(invokeArgs, strconv.FormatUint(index[idx], 10))
+		invokeArgs = append(invokeArgs, strconv.FormatUint(typ[idx], 10))
+		invokeArgs = append(invokeArgs, callFunc[idx])
+		invokeArgs = append(invokeArgs, string(callArgsBytes))
+		invokeArgs = append(invokeArgs, strconv.FormatUint(txStatus[idx], 10))
+		invokeArgs = append(invokeArgs, string(signatureBytes))
+		invokeArgs = append(invokeArgs, strconv.FormatBool(isEncrypted[idx]))
+
+		resp := broker.invokeInterchain(stub, invokeArgs)
+		if resp.Status != shim.OK {
+			return errorResponse(resp.Message)
+		}
+	}
+
+	return shim.Success(nil)
 }
 
 func (broker *Broker) invokeInterchain(stub shim.ChaincodeStubInterface, args []string) pb.Response {
