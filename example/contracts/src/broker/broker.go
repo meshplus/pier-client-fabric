@@ -766,10 +766,32 @@ func (broker *Broker) invokeInterchains(stub shim.ChaincodeStubInterface, args [
 		isEncrypted []bool
 	)
 
-	for _, arg := range args {
-		if err := json.Unmarshal([]byte(arg), &srcFullID); err != nil {
-			return errorResponse(fmt.Sprintf("unmarshal args failed for %s", arg))
-		}
+	if err := json.Unmarshal([]byte(args[0]), &srcFullID); err != nil {
+		return errorResponse(fmt.Sprintf("unmarshal args failed for %s", args[0]))
+	}
+	if err := json.Unmarshal([]byte(args[1]), &targetCID); err != nil {
+		return errorResponse(fmt.Sprintf("unmarshal args failed for %s", args[1]))
+	}
+	if err := json.Unmarshal([]byte(args[2]), &index); err != nil {
+		return errorResponse(fmt.Sprintf("unmarshal args failed for %s", args[2]))
+	}
+	if err := json.Unmarshal([]byte(args[3]), &typ); err != nil {
+		return errorResponse(fmt.Sprintf("unmarshal args failed for %s", args[3]))
+	}
+	if err := json.Unmarshal([]byte(args[4]), &callFunc); err != nil {
+		return errorResponse(fmt.Sprintf("unmarshal args failed for %s", args[4]))
+	}
+	if err := json.Unmarshal([]byte(args[5]), &callArgs); err != nil {
+		return errorResponse(fmt.Sprintf("unmarshal args failed for %s", args[5]))
+	}
+	if err := json.Unmarshal([]byte(args[6]), &txStatus); err != nil {
+		return errorResponse(fmt.Sprintf("unmarshal args failed for %s", args[6]))
+	}
+	if err := json.Unmarshal([]byte(args[7]), &signature); err != nil {
+		return errorResponse(fmt.Sprintf("unmarshal args failed for %s", args[7]))
+	}
+	if err := json.Unmarshal([]byte(args[8]), &isEncrypted); err != nil {
+		return errorResponse(fmt.Sprintf("unmarshal args failed for %s", args[8]))
 	}
 
 	for idx := 0; idx < 9; idx++ {
