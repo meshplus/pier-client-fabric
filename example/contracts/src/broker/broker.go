@@ -769,10 +769,10 @@ func (broker *Broker) invokeInterchains(stub shim.ChaincodeStubInterface, args [
 	if err := json.Unmarshal([]byte(args[0]), &srcFullID); err != nil {
 		return errorResponse(fmt.Sprintf("unmarshal args failed for %s", args[0]))
 	}
-	if err := json.Unmarshal([]byte(args[1]), &index); err != nil {
+	if err := json.Unmarshal([]byte(args[1]), &targetCID); err != nil {
 		return errorResponse(fmt.Sprintf("unmarshal args failed for %s", args[1]))
 	}
-	if err := json.Unmarshal([]byte(args[2]), &targetCID); err != nil {
+	if err := json.Unmarshal([]byte(args[2]), &index); err != nil {
 		return errorResponse(fmt.Sprintf("unmarshal args failed for %s", args[2]))
 	}
 	if err := json.Unmarshal([]byte(args[3]), &typ); err != nil {
@@ -833,7 +833,7 @@ func (broker *Broker) invokeInterchains(stub shim.ChaincodeStubInterface, args [
 		}
 	}
 
-	return shim.Success(nil)
+	return successResponse(nil)
 }
 
 func (broker *Broker) invokeInterchain(stub shim.ChaincodeStubInterface, args []string) pb.Response {

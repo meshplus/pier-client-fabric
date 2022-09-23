@@ -468,7 +468,7 @@ func (c *Client) InvokeInterchains(srcFullID []string, index []uint64, destAddr 
 		return nil, nil, err
 	}
 
-	args := util.ToChaincodeArgs(string(srcFullIDBytes), string(indexBytes), string(destAddrBytes), string(reqTypeBytes), string(callFuncBytes),
+	args := util.ToChaincodeArgs(string(srcFullIDBytes), string(destAddrBytes), string(indexBytes), string(reqTypeBytes), string(callFuncBytes),
 		string(callArgsBytes), string(txStatusBytes), string(multiSignBytes), string(encryptBytes))
 
 	request := channel.Request{
