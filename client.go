@@ -114,8 +114,10 @@ func (c *Client) Initialize(configPath string, extra []byte, mode string) error 
 	c.bitxhubID = chainConfig.BxhId
 	broker.Ds_stub.MockPeerChaincode("broker", broker.Broker_stub, "mychannel")
 	broker.Broker_stub.MockPeerChaincode("data_swapper", broker.Ds_stub, "mychannel")
-	broker.T_stub.MockPeerChaincode("broker", broker.Broker_stub, "mychannel")
-	broker.Broker_stub.MockPeerChaincode("transfer", broker.T_stub, "mychannel")
+	for i := 0; i < broker.ContractNum; i++ {
+		broker.T_stub[i].MockPeerChaincode("broker", broker.Broker_stub, "mychannel")
+		broker.Broker_stub.MockPeerChaincode("transfer"+strconv.Itoa(i), broker.T_stub[i], "mychannel")
+	}
 	if strings.EqualFold(config.Mode.Type, DirectMode) {
 		broker.Broker_stub.MockPeerChaincode("transaction", broker.Transaction_stub, "mychannel")
 		invoke := broker.Broker_stub.MockInvoke("1", util.ToChaincodeArgs("initialize", c.bitxhubID, c.appchainID, "0"))

@@ -249,21 +249,23 @@ func (broker *Broker) initialize(stub shim.ChaincodeStubInterface, args []string
 	}
 
 	// register local services
-	localService, err := broker.getLocalServiceList(stub)
-	if err != nil {
-		return shim.Error(err.Error())
-	}
-	localService = append(localService, getKey("mychannel", "transfer"))
-	if err := broker.putLocalServiceList(stub, localService); err != nil {
-		return shim.Error(err.Error())
-	}
-	serviceOrdered, err := broker.getServiceOrderedList(stub)
-	if err != nil {
-		return shim.Error(err.Error())
-	}
-	serviceOrdered[getKey("mychannel", "transfer")] = false
-	if err = broker.putServiceOrderedList(stub, serviceOrdered); err != nil {
-		return shim.Error(err.Error())
+	for i := 0; i < ContractNum; i++ {
+		localService, err := broker.getLocalServiceList(stub)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		localService = append(localService, getKey("mychannel", "transfer"+strconv.Itoa(i)))
+		if err := broker.putLocalServiceList(stub, localService); err != nil {
+			return shim.Error(err.Error())
+		}
+		serviceOrdered, err := broker.getServiceOrderedList(stub)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		serviceOrdered[getKey("mychannel", "transfer"+strconv.Itoa(i))] = false
+		if err = broker.putServiceOrderedList(stub, serviceOrdered); err != nil {
+			return shim.Error(err.Error())
+		}
 	}
 
 	return shim.Success(nil)

@@ -13,13 +13,18 @@ import (
 	"strings"
 )
 
-var T_stub *shimtest.MockStub
+var T_stub []*shimtest.MockStub
+
+const ContractNum = 10
 
 func init() {
-	transfer := new(Transfer)
-	// 获取MockStub对象， 传入名称和链码实体
-	T_stub = shimtest.NewMockStub("Transfer", transfer)
-	T_stub.MockInit("1", nil)
+	T_stub = make([]*shimtest.MockStub, ContractNum)
+	for i := 0; i < ContractNum; i++ {
+		transfer := new(Transfer)
+		// 获取MockStub对象， 传入名称和链码实体
+		T_stub[i] = shimtest.NewMockStub("Transfer"+strconv.Itoa(i), transfer)
+		T_stub[i].MockInit(strconv.Itoa(i), nil)
+	}
 }
 
 type Transfer struct{}

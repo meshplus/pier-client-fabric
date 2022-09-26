@@ -68,6 +68,7 @@ func (g *ValidatorServer) Start() error {
 }
 
 type MockReq struct {
+	Uuid string   `json:"uuid"`
 	Args []string `json:"args"` //第一个参数为Func
 }
 
@@ -103,7 +104,11 @@ func (g *ValidatorServer) t_call(c *gin.Context) {
 	if err := c.ShouldBindJSON(req); err != nil {
 		c.JSON(http.StatusInternalServerError, err)
 	}
-	invoke := broker.T_stub.MockInvoke("1", util.ToChaincodeArgs(req.Args...))
+	i, err := strconv.Atoi(req.Uuid)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, err)
+	}
+	invoke := broker.T_stub[i].MockInvoke(req.Uuid, util.ToChaincodeArgs(req.Args...))
 	if invoke.Status != 200 {
 		c.JSON(http.StatusInternalServerError, invoke.Message)
 	}
