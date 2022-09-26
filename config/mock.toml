@@ -1,12 +1,12 @@
 title = "Mock"
 
 [appchain]
-bxh_id = ""
+bxh_id = "1356"
 appchain_id = "testchain"
 port = "8081"
 
 [mode]
-type = "direct" # relay or direct
+type = "relay" # relay or direct
 [mode.relay]
 timeout_height = 50
 

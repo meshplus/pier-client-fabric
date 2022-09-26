@@ -3,6 +3,7 @@ module github.com/meshplus/pier-client-fabric
 go 1.13
 
 require (
+	github.com/Rican7/retry v0.1.0
 	github.com/cloudflare/cfssl v0.0.0-20190409034051-768cd563887f
 	github.com/ethereum/go-ethereum v1.10.4
 	github.com/fatih/color v1.9.0
@@ -18,8 +19,8 @@ require (
 	github.com/hyperledger/fabric-protos-go v0.0.0-20201028172056-a3136dde2354
 	github.com/hyperledger/fabric-sdk-go v1.0.0-alpha5
 	github.com/meshplus/bitxhub-kit v1.2.1-0.20220412092457-5836414df781
-	github.com/meshplus/bitxhub-model v1.2.1-0.20220616031805-96a66092bc97
-	github.com/meshplus/pier v1.24.1-0.20220707072050-c8660b28053c
+	github.com/meshplus/bitxhub-model v1.2.1-0.20220803022708-9ab7a71abdbf
+	github.com/meshplus/pier v1.24.1-0.20220803023357-8533944f0d08
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/viper v1.7.1
 	github.com/stretchr/testify v1.7.0

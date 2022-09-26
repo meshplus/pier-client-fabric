@@ -7,13 +7,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/hyperledger/fabric-chaincode-go/shim"
+	"github.com/hyperledger/fabric-chaincode-go/shimtest"
 	"github.com/hyperledger/fabric/common/util"
 	"github.com/meshplus/bitxhub-model/pb"
-	"github.com/stretchr/testify/require"
-	"testing"
-
-	"github.com/hyperledger/fabric-chaincode-go/shimtest"
 	"github.com/meshplus/pier-client-fabric/broker"
+	"github.com/stretchr/testify/require"
+	"net/http"
+	"testing"
+	"time"
 )
 
 func TestTransfer(t *testing.T) {
@@ -123,7 +124,7 @@ func TestDirect(t *testing.T) {
 
 func TestClient_Initialize(t *testing.T) {
 	client := &Client{}
-	err := client.Initialize("./config", nil)
+	err := client.Initialize("./config", nil, "")
 	require.Nil(t, err)
 	bxhId, chainId, err := client.GetChainID()
 	require.Nil(t, err)
@@ -132,7 +133,7 @@ func TestClient_Initialize(t *testing.T) {
 
 func TestClient_GetAppchainInfo(t *testing.T) {
 	client := &Client{}
-	err := client.Initialize("./config", nil)
+	err := client.Initialize("./config", nil, "")
 	require.Nil(t, err)
 
 	brokerAddr, trustRoot, ruleAddr, err := client.GetAppchainInfo("chain0")
@@ -144,7 +145,7 @@ func TestClient_GetAppchainInfo(t *testing.T) {
 
 func TestClient_SubmitIBTP(t *testing.T) {
 	client := &Client{}
-	err := client.Initialize("./config", nil)
+	err := client.Initialize("./config", nil, "")
 	require.Nil(t, err)
 
 	// setBalance before transfer
@@ -176,7 +177,7 @@ func TestClient_SubmitIBTP(t *testing.T) {
 
 func TestClient_GetDirectTransactionMeta(t *testing.T) {
 	client := &Client{}
-	err := client.Initialize("./config", nil)
+	err := client.Initialize("./config", nil, "")
 	require.Nil(t, err)
 
 	// setBalance
@@ -197,13 +198,63 @@ func TestClient_GetDirectTransactionMeta(t *testing.T) {
 
 func TestClient_GetChainID(t *testing.T) {
 	client := &Client{}
-	err := client.Initialize("./config", nil)
+	err := client.Initialize("./config", nil, "")
 	require.Nil(t, err)
 
 	bxhId, chainId, err := client.GetChainID()
 	require.Nil(t, err)
 	fmt.Println(bxhId)
 	fmt.Println(chainId)
+
+	services, err := client.GetServices()
+	require.Nil(t, err)
+	fmt.Println(services)
+}
+
+func TestClient_SubmitIBTPBatch(t *testing.T) {
+	client := &Client{}
+	err := client.Initialize("./config", nil, "")
+	require.Nil(t, err)
+
+	num := 1
+	var from []string
+	var index []uint64
+	var serviceID []string
+	var ibtpType []pb.IBTP_Type
+	var content []*pb.Content
+	var proof []*pb.BxhProof
+	var isEncrypted []bool
+	for i := 0; i < num; i++ {
+		from = append(from, "1356:chain0:0x6DCB3337cd4Ec41d88E62A96123bF3a4E06A7e13")
+		index = append(index, (uint64)(i+1))
+		serviceID = append(serviceID, "mychannel&transfer")
+		proof = append(proof, &pb.BxhProof{
+			TxStatus: pb.TransactionStatus_BEGIN,
+		})
+		ibtpType = append(ibtpType, pb.IBTP_INTERCHAIN)
+		isEncrypted = append(isEncrypted, false)
+
+		var args [][]byte
+		args = append(args, []byte("alice"))
+		args = append(args, []byte("alice"))
+		args = append(args, IntToBytes(10))
+		content = append(content, &pb.Content{
+			Func: "interchainCharge",
+			Args: args,
+		})
+
+	}
+
+	resp, err := client.SubmitIBTPBatch(from, index, serviceID, ibtpType, content, proof, isEncrypted)
+	require.Nil(t, err)
+	fmt.Println(resp)
+
+	for i := 0; i < num; i++ {
+		servicePair := from[i] + "-1356:testchain:" + serviceID[i]
+		ibtp, err := client.GetReceiptMessage(servicePair, index[i])
+		require.Nil(t, err)
+		fmt.Println(ibtp)
+	}
 }
 
 func IntToBytes(n int) []byte {
@@ -211,4 +262,37 @@ func IntToBytes(n int) []byte {
 	bytesBuffer := bytes.NewBuffer([]byte{})
 	binary.Write(bytesBuffer, binary.BigEndian, x)
 	return bytesBuffer.Bytes()
+}
+
+func TestBatchProcess(t *testing.T) {
+	invoke := 0
+	//var wg sync.WaitGroup
+	num := 100
+	//wg.Add(num)
+	//for i := 0; i < num; i++ {
+	//	go func() {
+	for j := 0; j < num; j++ {
+		jsonStr := []byte(`{"args":["transfer","1356:chain1:mychannel&transfer","alice","alice","1"]}`)
+		url := "http://127.0.0.1:8081/v1/transfer"
+		req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonStr))
+		require.Nil(t, err)
+		req.Header.Set("Content-Type", "application/json")
+		client := &http.Client{}
+		resp, err := client.Do(req)
+		require.Nil(t, err)
+		statusCode := resp.StatusCode
+		require.Nil(t, err)
+		if statusCode != 500 {
+			invoke++
+		}
+		fmt.Println(statusCode)
+		err = resp.Body.Close()
+		require.Nil(t, err)
+		fmt.Printf("index: %d - %d", j+2, time.Now().Unix())
+	}
+	//wg.Done()
+	//}()
+	//}
+	//wg.Wait()
+	fmt.Printf("invoke %d times", invoke)
 }

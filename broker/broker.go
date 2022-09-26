@@ -28,6 +28,7 @@ const (
 	adminList               = "admin-list"
 	localServiceList        = "local-service-list"
 	validatorList           = "validator-list"
+	serviceOrderedList      = "service-ordered-list"
 	passed                  = 1
 	rejected                = 0
 	delimiter               = "&"
@@ -85,6 +86,7 @@ type proposal struct {
 	Approve     uint64   `json:"approve"`
 	Reject      uint64   `json:"reject"`
 	VotedAdmins []string `json:"voted_admins"`
+	Ordered     bool     `json:"ordered"`
 	Exist       bool     `json:"exist"`
 }
 
@@ -187,6 +189,8 @@ func (broker *Broker) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		return broker.pollingEvent(stub, args)
 	case "initialize":
 		return broker.initialize(stub, args)
+	case "invokeInterchains":
+		return broker.invokeInterchains(stub, args)
 	case "invokeInterchain":
 		return broker.invokeInterchain(stub, args)
 	case "invokeReceipt":
@@ -242,6 +246,24 @@ func (broker *Broker) initialize(stub shim.ChaincodeStubInterface, args []string
 		if response.Status != shim.OK {
 			return shim.Error(fmt.Errorf("invoke transaction chaincode: %d - %s", response.Status, response.Message).Error())
 		}
+	}
+
+	// register local services
+	localService, err := broker.getLocalServiceList(stub)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	localService = append(localService, getKey("mychannel", "transfer"))
+	if err := broker.putLocalServiceList(stub, localService); err != nil {
+		return shim.Error(err.Error())
+	}
+	serviceOrdered, err := broker.getServiceOrderedList(stub)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	serviceOrdered[getKey("mychannel", "transfer")] = false
+	if err = broker.putServiceOrderedList(stub, serviceOrdered); err != nil {
+		return shim.Error(err.Error())
 	}
 
 	return shim.Success(nil)
@@ -576,6 +598,10 @@ func (broker *Broker) audit(stub shim.ChaincodeStubInterface, args []string) pb.
 	channel := args[0]
 	chaincodeName := args[1]
 	status := args[2]
+	ordered, err := strconv.ParseBool(args[3])
+	if err != nil {
+		shim.Error(fmt.Sprintf("can not parse bool: %s", args[3]))
+	}
 	st, err := strconv.ParseUint(status, 10, 64)
 	if err != nil {
 		return shim.Error(fmt.Sprintf("can not parse uint: %s", status))
@@ -628,6 +654,14 @@ func (broker *Broker) audit(stub shim.ChaincodeStubInterface, args []string) pb.
 		}
 		localService = append(localService, getKey(channel, chaincodeName))
 		if err := broker.putLocalServiceList(stub, localService); err != nil {
+			return shim.Error(err.Error())
+		}
+		serviceOrdered, err := broker.getServiceOrderedList(stub)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		serviceOrdered[getKey(channel, chaincodeName)] = ordered
+		if err = broker.putServiceOrderedList(stub, serviceOrdered); err != nil {
 			return shim.Error(err.Error())
 		}
 	}
@@ -799,6 +833,93 @@ func (broker *Broker) genFullServiceID(stub shim.ChaincodeStubInterface, service
 
 func genServicePair(from, to string) string {
 	return fmt.Sprintf("%s-%s", from, to)
+}
+
+func (broker *Broker) invokeInterchains(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	if len(args) != 9 {
+		return errorResponse("incorrect number of arguments, expecting 9")
+	}
+
+	var (
+		srcFullID   []string
+		targetCID   []string
+		index       []uint64
+		typ         []uint64
+		callFunc    []string
+		callArgs    [][][]byte
+		txStatus    []uint64
+		signature   [][][]byte
+		isEncrypted []bool
+	)
+
+	if err := json.Unmarshal([]byte(args[0]), &srcFullID); err != nil {
+		return errorResponse(fmt.Sprintf("unmarshal args failed for %s", args[0]))
+	}
+	if err := json.Unmarshal([]byte(args[1]), &index); err != nil {
+		return errorResponse(fmt.Sprintf("unmarshal args failed for %s", args[1]))
+	}
+	if err := json.Unmarshal([]byte(args[2]), &targetCID); err != nil {
+		return errorResponse(fmt.Sprintf("unmarshal args failed for %s", args[2]))
+	}
+	if err := json.Unmarshal([]byte(args[3]), &typ); err != nil {
+		return errorResponse(fmt.Sprintf("unmarshal args failed for %s", args[3]))
+	}
+	if err := json.Unmarshal([]byte(args[4]), &callFunc); err != nil {
+		return errorResponse(fmt.Sprintf("unmarshal args failed for %s", args[4]))
+	}
+	if err := json.Unmarshal([]byte(args[5]), &callArgs); err != nil {
+		return errorResponse(fmt.Sprintf("unmarshal args failed for %s", args[5]))
+	}
+	if err := json.Unmarshal([]byte(args[6]), &txStatus); err != nil {
+		return errorResponse(fmt.Sprintf("unmarshal args failed for %s", args[6]))
+	}
+	if err := json.Unmarshal([]byte(args[7]), &signature); err != nil {
+		return errorResponse(fmt.Sprintf("unmarshal args failed for %s", args[7]))
+	}
+	if err := json.Unmarshal([]byte(args[8]), &isEncrypted); err != nil {
+		return errorResponse(fmt.Sprintf("unmarshal args failed for %s", args[8]))
+	}
+
+	for idx := 0; idx < len(srcFullID); idx++ {
+		serviceOrdered, err := broker.getServiceOrderedList(stub)
+		if err != nil {
+			return errorResponse(fmt.Sprintf("get service orered list failed: %s", err.Error()))
+		}
+		ordered, ok := serviceOrdered[targetCID[idx]]
+		if !ok {
+			return errorResponse(fmt.Sprintf("cannot get service ordered"))
+		}
+		if ordered {
+			return errorResponse(fmt.Sprintf("dst service is not ordered"))
+		}
+
+		callArgsBytes, err := json.Marshal(callArgs[idx])
+		if err != nil {
+			return errorResponse(err.Error())
+		}
+		signatureBytes, err := json.Marshal(signature[idx])
+		if err != nil {
+			return errorResponse(err.Error())
+		}
+
+		var invokeArgs []string
+		invokeArgs = append(invokeArgs, srcFullID[idx])
+		invokeArgs = append(invokeArgs, targetCID[idx])
+		invokeArgs = append(invokeArgs, strconv.FormatUint(index[idx], 10))
+		invokeArgs = append(invokeArgs, strconv.FormatUint(typ[idx], 10))
+		invokeArgs = append(invokeArgs, callFunc[idx])
+		invokeArgs = append(invokeArgs, string(callArgsBytes))
+		invokeArgs = append(invokeArgs, strconv.FormatUint(txStatus[idx], 10))
+		invokeArgs = append(invokeArgs, string(signatureBytes))
+		invokeArgs = append(invokeArgs, strconv.FormatBool(isEncrypted[idx]))
+
+		resp := broker.invokeInterchain(stub, invokeArgs)
+		if resp.Status != shim.OK {
+			return errorResponse(resp.Message)
+		}
+	}
+
+	return shim.Success(nil)
 }
 
 func (broker *Broker) invokeInterchain(stub shim.ChaincodeStubInterface, args []string) pb.Response {

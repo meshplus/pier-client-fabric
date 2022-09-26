@@ -315,6 +315,29 @@ func (broker *Broker) putLocalServiceList(stub shim.ChaincodeStubInterface, loca
 	return stub.PutState(localServiceList, localServiceBytes)
 }
 
+func (broker *Broker) getServiceOrderedList(stub shim.ChaincodeStubInterface) (map[string]bool, error) {
+	serviceOrderedByte, err := stub.GetState(serviceOrderedList)
+	if err != nil {
+		return nil, err
+	}
+	serviceOrdered := make(map[string]bool)
+	if serviceOrderedByte == nil {
+		return serviceOrdered, nil
+	}
+	if err := json.Unmarshal(serviceOrderedByte, &serviceOrdered); err != nil {
+		return nil, err
+	}
+	return serviceOrdered, nil
+}
+
+func (broker *Broker) putServiceOrderedList(stub shim.ChaincodeStubInterface, serviceOrdered map[string]bool) error {
+	serviceOrderedByte, err := json.Marshal(serviceOrdered)
+	if err != nil {
+		return err
+	}
+	return stub.PutState(serviceOrderedList, serviceOrderedByte)
+}
+
 func (broker *Broker) getReceiptMessages(stub shim.ChaincodeStubInterface) (map[string](map[uint64]pb.Response), error) {
 	messagesBytes, err := stub.GetState(receiptMessages)
 	if err != nil {
