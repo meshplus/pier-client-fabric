@@ -19,7 +19,7 @@ RUN go mod download -x
 COPY build/pier .
 COPY . ../pier-client-fabric/
 
-RUN go get -u github.com/gobuffalo/packr/packr
+RUN go install github.com/gobuffalo/packr/v2@v2.8.3
 
 RUN make install
 

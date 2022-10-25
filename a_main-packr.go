@@ -2,7 +2,7 @@
 
 package main
 
-import "github.com/gobuffalo/packr"
+import "github.com/gobuffalo/packr/v2"
 
 // You can use the "packr clean" command to clean up this,
 // and any other packr generated files.

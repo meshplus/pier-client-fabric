@@ -18,7 +18,7 @@ test-coverage:
 	@cat cover.out >> coverage.txt
 
 fabric2.0:
-	@packr
+	@packr2
 	mkdir -p build
 	$(GO) build -o build/fabric-client-2.0 ./*.go
 
