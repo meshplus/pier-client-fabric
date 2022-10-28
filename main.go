@@ -11,7 +11,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/gobuffalo/packd"
-	"github.com/gobuffalo/packr"
+	"github.com/gobuffalo/packr/v2"
 	"github.com/hashicorp/go-plugin"
 	"github.com/hyperledger/fabric-sdk-go/pkg/client/ledger"
 	"github.com/hyperledger/fabric-sdk-go/pkg/core/config"
@@ -33,7 +33,7 @@ var initCMD = cli.Command{
 	},
 	Action: func(ctx *cli.Context) error {
 		target := ctx.String("target")
-		box := packr.NewBox("config")
+		box := packr.New("box", "config")
 
 		if err := box.Walk(func(s string, file packd.File) error {
 			p := filepath.Join(target, s)

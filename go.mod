@@ -9,7 +9,7 @@ require (
 	github.com/fatih/color v1.9.0
 	github.com/gin-gonic/gin v1.7.4
 	github.com/gobuffalo/packd v1.0.0
-	github.com/gobuffalo/packr v1.30.1
+	github.com/gobuffalo/packr/v2 v2.5.1
 	github.com/golang/protobuf v1.5.2
 	github.com/google/certificate-transparency-go v1.1.0 // indirect
 	github.com/hashicorp/go-hclog v0.0.0-20180709165350-ff2cf002a8dd
