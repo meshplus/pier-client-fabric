@@ -5,6 +5,9 @@ CURRENT_TAG =$(shell git describe --abbrev=0 --tags)
 
 GO  = GO111MODULE=on go
 
+GREEN=\033[0;32m
+NC=\033[0m
+
 help: Makefile
 	@echo "Choose a command run:"
 	@sed -n 's/^##//p' $< | column -t -s ':' | sed -e 's/^/ /'
@@ -19,9 +22,10 @@ test-coverage:
 
 ## make fabric1.4: build fabric(1.4) client plugin
 fabric1.4:
-	@packr
+	@packr2
 	mkdir -p build
 	$(GO) build -o build/fabric-client-1.4 ./*.go
+	@printf "${GREEN}Build fabric-client-1.4 successfully!${NC}\n"
 
 docker:
 	mkdir -p build
