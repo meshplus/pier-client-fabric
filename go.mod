@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/Rican7/retry v0.1.0
 	github.com/cloudflare/cfssl v0.0.0-20190409034051-768cd563887f
-	github.com/ethereum/go-ethereum v1.10.4
+	github.com/ethereum/go-ethereum v1.10.8
 	github.com/fatih/color v1.9.0
 	github.com/gin-gonic/gin v1.7.4
 	github.com/gobuffalo/packd v1.0.1
@@ -17,10 +17,10 @@ require (
 	github.com/hyperledger/fabric-chaincode-go v0.0.0-20200511190512-bcfeb58dd83a
 	github.com/hyperledger/fabric-protos-go v0.0.0-20201028172056-a3136dde2354
 	github.com/hyperledger/fabric-sdk-go v1.0.0-beta1.0.20200106161850-8f3d32c9d1a6
-	github.com/meshplus/bitxhub-core v1.3.1-0.20221216095518-2b59e2647227
-	github.com/meshplus/bitxhub-kit v1.2.1-0.20220412092457-5836414df781
-	github.com/meshplus/bitxhub-model v1.2.1-0.20230103095329-f8638b97544e
-	github.com/meshplus/pier v1.24.1-0.20230106080320-d18aef37f37a
+	github.com/meshplus/bitxhub-core v1.28.0
+	github.com/meshplus/bitxhub-kit v1.28.0
+	github.com/meshplus/bitxhub-model v1.28.0
+	github.com/meshplus/pier v1.24.1-0.20230119083935-a568b0398d3c
 	github.com/spf13/viper v1.8.1
 	github.com/urfave/cli v1.22.1
 )
@@ -29,6 +29,7 @@ require (
 	github.com/BurntSushi/toml v0.3.1 // indirect
 	github.com/Knetic/govaluate v3.0.0+incompatible // indirect
 	github.com/OpenPeeDeeP/depguard v1.0.0 // indirect
+	github.com/benbjohnson/clock v1.0.1 // indirect
 	github.com/beorn7/perks v1.0.0 // indirect
 	github.com/bgentry/speakeasy v0.1.0 // indirect
 	github.com/btcsuite/btcd v0.21.0-beta // indirect
@@ -63,7 +64,7 @@ require (
 	github.com/gobuffalo/logger v1.0.6 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b // indirect
+	github.com/golang/glog v1.0.0 // indirect
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
 	github.com/golang/mock v1.6.0 // indirect
 	github.com/golangci/check v0.0.0-20180506172741-cfe4005ccda2 // indirect
@@ -98,7 +99,7 @@ require (
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/hashicorp/yamux v0.0.0-20180604194846-3520598351bb // indirect
-	github.com/huin/goupnp v1.0.1-0.20210310174557-0ca763054c88 // indirect
+	github.com/huin/goupnp v1.0.2 // indirect
 	github.com/hyperledger/fabric-lib-go v1.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/ipfs/go-cid v0.0.7 // indirect
@@ -128,6 +129,7 @@ require (
 	github.com/libp2p/go-libp2p-autonat v0.2.3 // indirect
 	github.com/libp2p/go-libp2p-blankhost v0.1.6 // indirect
 	github.com/libp2p/go-libp2p-circuit v0.2.2 // indirect
+	github.com/libp2p/go-libp2p-connmgr v0.2.3 // indirect
 	github.com/libp2p/go-libp2p-core v0.6.1 // indirect
 	github.com/libp2p/go-libp2p-crypto v0.1.0 // indirect
 	github.com/libp2p/go-libp2p-discovery v0.4.0 // indirect
@@ -149,7 +151,7 @@ require (
 	github.com/libp2p/go-msgio v0.0.4 // indirect
 	github.com/libp2p/go-nat v0.0.5 // indirect
 	github.com/libp2p/go-netroute v0.1.2 // indirect
-	github.com/libp2p/go-openssl v0.0.5 // indirect
+	github.com/libp2p/go-openssl v0.0.7 // indirect
 	github.com/libp2p/go-reuseport v0.0.1 // indirect
 	github.com/libp2p/go-reuseport-transport v0.0.3 // indirect
 	github.com/libp2p/go-sockaddr v0.1.0 // indirect
@@ -161,11 +163,11 @@ require (
 	github.com/markbates/errx v1.1.0 // indirect
 	github.com/markbates/oncer v1.0.0 // indirect
 	github.com/markbates/safe v1.0.1 // indirect
-	github.com/mattn/go-colorable v0.1.4 // indirect
+	github.com/mattn/go-colorable v0.1.8 // indirect
 	github.com/mattn/go-isatty v0.0.12 // indirect
 	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
-	github.com/meshplus/go-lightp2p v0.0.0-20221205091217-47f605aa3067 // indirect
+	github.com/meshplus/go-lightp2p v1.28.0 // indirect
 	github.com/miekg/pkcs11 v1.0.3 // indirect
 	github.com/minio/blake2b-simd v0.0.0-20160723061019-3f5f724cb5b1 // indirect
 	github.com/minio/sha256-simd v0.1.1 // indirect
@@ -174,7 +176,7 @@ require (
 	github.com/mitchellh/mapstructure v1.4.1 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.1 // indirect
-	github.com/mr-tron/base58 v1.1.3 // indirect
+	github.com/mr-tron/base58 v1.2.0 // indirect
 	github.com/multiformats/go-base32 v0.0.3 // indirect
 	github.com/multiformats/go-base36 v0.1.0 // indirect
 	github.com/multiformats/go-multiaddr v0.3.0 // indirect
@@ -226,12 +228,12 @@ require (
 	go.uber.org/zap v1.17.0 // indirect
 	golang.org/x/crypto v0.0.0-20220722155217-630584e8d5aa // indirect
 	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4 // indirect
-	golang.org/x/net v0.0.0-20220722155237-a158d28d115b // indirect
+	golang.org/x/net v0.0.0-20220909164309-bea034e7d591 // indirect
 	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4 // indirect
 	golang.org/x/sys v0.0.0-20220804214406-8e32c043e418 // indirect
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
 	golang.org/x/text v0.3.8 // indirect
-	golang.org/x/time v0.0.0-20201208040808-7e3f01d25324 // indirect
+	golang.org/x/time v0.0.0-20210220033141-f8bda1e9f3ba // indirect
 	golang.org/x/tools v0.1.12 // indirect
 	google.golang.org/genproto v0.0.0-20221014213838-99cd37c6964a // indirect
 	google.golang.org/grpc v1.50.1 // indirect

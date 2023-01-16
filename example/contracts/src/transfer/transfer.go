@@ -126,6 +126,9 @@ func (t *Transfer) transfer(stub shim.ChaincodeStubInterface, args []string) pb.
 		}
 
 		var callArgs, argsRb [][]byte
+		typ := make([]byte, 8)
+		binary.BigEndian.PutUint64(typ, 0)
+		callArgs = append(callArgs, typ)
 		callArgs = append(callArgs, []byte(sender))
 		callArgs = append(callArgs, []byte(receiver))
 		transferAmount := make([]byte, 8)
