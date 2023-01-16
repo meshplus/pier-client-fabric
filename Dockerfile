@@ -13,7 +13,7 @@ RUN go env -w GOPROXY=https://goproxy.cn,direct \
     && cd /go/src/github.com/meshplus \
     && git clone -b $version https://github.com/meshplus/pier.git \
     && cd /go/src/github.com/meshplus/pier \
-    && go get -u github.com/gobuffalo/packr/packr \
+    && go install github.com/gobuffalo/packr/v2@v2.8.3 \
     && make install \
     && cp ./build/wasm/lib/linux-amd64/libwasmer.so /lib \
     && cd /go/src/github.com/meshplus/pier-client-fabric/ \
