@@ -14,6 +14,7 @@ import (
 const (
 	channelID               = "mychannel"
 	brokerContractName      = "broker"
+	delimiter               = "&"
 	emitInterchainEventFunc = "EmitInterchainEvent"
 )
 
@@ -110,11 +111,19 @@ func (s *DataSwapper) set(stub shim.ChaincodeStubInterface, args []string) pb.Re
 
 // interchainSet is the callback function getting data by interchain
 func (s *DataSwapper) interchainSet(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	if onlyBroker := onlyBroker(stub); !onlyBroker {
+		return shim.Error(fmt.Sprintf("caller is not broker"))
+	}
+
 	return s.set(stub, args)
 }
 
 // interchainGet gets data by interchain
 func (s *DataSwapper) interchainGet(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	if onlyBroker := onlyBroker(stub); !onlyBroker {
+		return shim.Error(fmt.Sprintf("caller is not broker"))
+	}
+
 	value, err := stub.GetState(args[0])
 	if err != nil {
 		return shim.Error(err.Error())

@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"github.com/meshplus/bitxhub-core/agency"
 	"os"
 	"strconv"
 	"strings"
@@ -20,7 +22,6 @@ import (
 	"github.com/hyperledger/fabric-sdk-go/pkg/common/providers/fab"
 	"github.com/hyperledger/fabric/common/util"
 	"github.com/meshplus/bitxhub-model/pb"
-	"github.com/meshplus/pier/pkg/plugins"
 )
 
 var (
@@ -31,7 +32,7 @@ var (
 	})
 )
 
-var _ plugins.Client = (*Client)(nil)
+var _ agency.Client = (*Client)(nil)
 
 const (
 	GetInnerMetaMethod                   = "getInnerMeta"       // get last index of each source chain executing tx
@@ -347,7 +348,7 @@ func (c *Client) SubmitIBTPBatch(from []string, index []uint64, serviceID []stri
 	)
 	for idx, ct := range content {
 		callFunc = append(callFunc, ct.Func)
-		args = append(args, ct.Args)
+		args = append(args, ct.Args[1:])
 		typ = append(typ, uint64(ibtpType[idx]))
 		txStatus = append(txStatus, uint64(proof[idx].TxStatus))
 		sign = append(sign, proof[idx].MultiSign)
@@ -368,7 +369,12 @@ func (c *Client) SubmitIBTPBatch(from []string, index []uint64, serviceID []stri
 func (c *Client) SubmitIBTP(from string, index uint64, serviceID string, ibtpType pb.IBTP_Type, content *pb.Content, proof *pb.BxhProof, isEncrypted bool) (*pb.SubmitIBTPResponse, error) {
 	ret := &pb.SubmitIBTPResponse{Status: true}
 
-	_, resp, err := c.InvokeInterchain(from, index, serviceID, uint64(ibtpType), content.Func, content.Args, uint64(proof.TxStatus), proof.MultiSign, isEncrypted)
+	typ := int64(binary.BigEndian.Uint64(content.Args[0]))
+	if typ == int64(pb.IBTP_Multi) {
+		return ret, fmt.Errorf("multi IBTP is not supported yet")
+	}
+
+	_, resp, err := c.InvokeInterchain(from, index, serviceID, uint64(ibtpType), content.Func, content.Args[1:], uint64(proof.TxStatus), proof.MultiSign, isEncrypted)
 	if err != nil {
 		ret.Status = false
 		ret.Message = fmt.Sprintf("invoke interchain foribtp to call %s: %w", content.Func, err)
@@ -396,7 +402,16 @@ func (c *Client) SubmitIBTP(from string, index uint64, serviceID string, ibtpTyp
 func (c *Client) SubmitReceipt(to string, index uint64, serviceID string, ibtpType pb.IBTP_Type, result *pb.Result, proof *pb.BxhProof) (*pb.SubmitIBTPResponse, error) {
 	ret := &pb.SubmitIBTPResponse{Status: true}
 
-	_, resp, err := c.InvokeReceipt(serviceID, to, index, uint64(ibtpType), result.Data, uint64(proof.TxStatus), proof.MultiSign)
+	var results [][][]byte
+	for _, s := range result.Data {
+		results = append(results, s.Data)
+	}
+
+	if len(result.MultiStatus) > 1 || (len(result.MultiStatus) == 0 && proof.TxStatus != pb.TransactionStatus_BEGIN) {
+		return ret, fmt.Errorf("multi IBTP is not supported yet")
+	}
+
+	_, resp, err := c.InvokeReceipt(serviceID, to, index, uint64(ibtpType), results[0], uint64(proof.TxStatus), proof.MultiSign)
 	if err != nil {
 		ret.Status = false
 		ret.Message = fmt.Sprintf("invoke receipt for ibtp to call: %w", err)
@@ -905,7 +920,7 @@ func genServicePair(from, to string) string {
 	return fmt.Sprintf("%s-%s", from, to)
 }
 
-func (c *Client) GetOffChainData(request *pb.GetDataRequest) (*pb.GetDataResponse, error) {
+func (c *Client) GetOffChainData(request *pb.GetDataRequest) (*pb.OffChainDataInfo, error) {
 	//TODO implement me
 	panic("implement me")
 }

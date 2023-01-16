@@ -16,6 +16,7 @@ import (
 const (
 	channelID               = "mychannel"
 	brokerContractName      = "broker"
+	delimiter               = "&"
 	emitInterchainEventFunc = "EmitInterchainEvent"
 )
 
@@ -189,6 +190,10 @@ func (t *Transfer) setBalance(stub shim.ChaincodeStubInterface, args []string) p
 
 // charge user,amount
 func (t *Transfer) interchainCharge(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	if onlyBroker := onlyBroker(stub); !onlyBroker {
+		return shim.Error(fmt.Sprintf("caller is not broker"))
+	}
+
 	if len(args) != 4 {
 		return shim.Error("incorrect number of arguments, expect 3")
 	}
@@ -225,6 +230,10 @@ func (t *Transfer) interchainCharge(stub shim.ChaincodeStubInterface, args []str
 }
 
 func (t *Transfer) interchainRollback(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	if onlyBroker := onlyBroker(stub); !onlyBroker {
+		return shim.Error(fmt.Sprintf("caller is not broker"))
+	}
+
 	if len(args) != 2 {
 		return shim.Error("incorrect number of arguments, expecting 2")
 	}
