@@ -377,7 +377,7 @@ func (c *Client) SubmitIBTP(from string, index uint64, serviceID string, ibtpTyp
 	_, resp, err := c.InvokeInterchain(from, index, serviceID, uint64(ibtpType), content.Func, content.Args[1:], uint64(proof.TxStatus), proof.MultiSign, isEncrypted)
 	if err != nil {
 		ret.Status = false
-		ret.Message = fmt.Sprintf("invoke interchain foribtp to call %s: %w", content.Func, err)
+		ret.Message = fmt.Sprintf("invoke interchain foribtp to call %s: %s", content.Func, err)
 		return ret, nil
 	}
 	ret.Status = resp.OK
@@ -414,7 +414,7 @@ func (c *Client) SubmitReceipt(to string, index uint64, serviceID string, ibtpTy
 	_, resp, err := c.InvokeReceipt(serviceID, to, index, uint64(ibtpType), results[0], uint64(proof.TxStatus), proof.MultiSign)
 	if err != nil {
 		ret.Status = false
-		ret.Message = fmt.Sprintf("invoke receipt for ibtp to call: %w", err)
+		ret.Message = fmt.Sprintf("invoke receipt for ibtp to call: %s", err)
 		return ret, nil
 	}
 	ret.Status = resp.OK
