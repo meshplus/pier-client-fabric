@@ -2,55 +2,50 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	pb "github.com/hyperledger/fabric/protos/peer"
 )
 
-func (transaction *Transaction) checkBroker(stub shim.ChaincodeStubInterface, function string) bool {
-	checks := map[string]struct{}{
-		"initialize":             {},
-		"registerAppchain":       {},
-		"registerRemoteService":  {},
-		"startTransaction":       {},
-		"rollbackTransaction":    {},
-		"endTransactionSuccess":  {},
-		"endTransactionFail":     {},
-		"endTransactionRollback": {},
-	}
-
-	if _, ok := checks[function]; !ok {
-		return true
-	}
-
-	return transaction.onlyBroker(stub)
-}
-
-func (transaction *Transaction) onlyBroker(stub shim.ChaincodeStubInterface) bool {
+func getChaincodeID(stub shim.ChaincodeStubInterface) (string, error) {
 	sp, err := stub.GetSignedProposal()
 	if err != nil {
-		return false
+		return "", err
 	}
 
 	proposal := &pb.Proposal{}
 	if err := proto.Unmarshal(sp.ProposalBytes, proposal); err != nil {
-		return false
+		return "", err
 	}
 
 	payload := &pb.ChaincodeProposalPayload{}
 	if err := proto.Unmarshal(proposal.Payload, payload); err != nil {
-		return false
+		return "", err
 	}
 
 	spec := &pb.ChaincodeInvocationSpec{}
 	if err := proto.Unmarshal(payload.Input, spec); err != nil {
+		return "", err
+	}
+
+	return getKey(stub.GetChannelID(), spec.ChaincodeSpec.ChaincodeId.Name), nil
+}
+
+func getKey(channel, chaincodeName string) string {
+	return channel + delimiter + chaincodeName
+}
+
+func onlyBroker(stub shim.ChaincodeStubInterface) bool {
+	brokerCCID := channelID + delimiter + brokerContractName
+	invoker, err := getChaincodeID(stub)
+	if err != nil {
+		fmt.Printf("get Invoker failed: %s", err.Error())
 		return false
 	}
-	if spec.ChaincodeSpec.ChaincodeId.Name != brokerContractName {
-		return false
-	}
-	return true
+
+	return brokerCCID == invoker
 }
 
 // putMap for persisting meta state into ledger

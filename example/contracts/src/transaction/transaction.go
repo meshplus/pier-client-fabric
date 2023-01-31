@@ -18,6 +18,7 @@ const (
 	startTimestampMeta    = "start-timestamp"
 	brokerContractName    = "broker"
 	channelID             = "mychannel"
+	delimiter             = "&"
 	colon                 = ":"
 	caret                 = "^"
 	hyphen                = "-"
@@ -108,6 +109,10 @@ func (transaction *Transaction) Invoke(stub shim.ChaincodeStubInterface) pb.Resp
 }
 
 func (transaction *Transaction) initialize(stub shim.ChaincodeStubInterface) pb.Response {
+	if onlyBroker := onlyBroker(stub); !onlyBroker {
+		return shim.Error(fmt.Sprintf("caller is not broker"))
+	}
+
 	err := transaction.initMap(stub)
 	if err != nil {
 		return shim.Error(err.Error())
@@ -117,6 +122,10 @@ func (transaction *Transaction) initialize(stub shim.ChaincodeStubInterface) pb.
 }
 
 func (transaction *Transaction) registerAppchain(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	if onlyBroker := onlyBroker(stub); !onlyBroker {
+		return shim.Error(fmt.Sprintf("caller is not broker"))
+	}
+
 	if len(args) != 4 {
 		return shim.Error("incorrect number of arguments, expecting 4")
 	}
@@ -161,6 +170,10 @@ func (transaction *Transaction) getAppchainInfo(stub shim.ChaincodeStubInterface
 }
 
 func (transaction *Transaction) registerRemoteService(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	if onlyBroker := onlyBroker(stub); !onlyBroker {
+		return shim.Error(fmt.Sprintf("caller is not broker"))
+	}
+
 	if len(args) != 3 {
 		return shim.Error("incorrect number of arguments, expecting 3")
 	}
@@ -223,6 +236,10 @@ func (transaction *Transaction) getRemoteServiceList(stub shim.ChaincodeStubInte
 }
 
 func (transaction *Transaction) startTransaction(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	if onlyBroker := onlyBroker(stub); !onlyBroker {
+		return shim.Error(fmt.Sprintf("caller is not broker"))
+	}
+
 	if len(args) != 3 {
 		return shim.Error("incorrect number of arguments, expecting 3")
 	}
@@ -254,6 +271,10 @@ func (transaction *Transaction) startTransaction(stub shim.ChaincodeStubInterfac
 }
 
 func (transaction *Transaction) rollbackTransaction(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	if onlyBroker := onlyBroker(stub); !onlyBroker {
+		return shim.Error(fmt.Sprintf("caller is not broker"))
+	}
+
 	if len(args) != 3 {
 		return shim.Error("incorrect number of arguments, expecting 3")
 	}
@@ -274,6 +295,10 @@ func (transaction *Transaction) rollbackTransaction(stub shim.ChaincodeStubInter
 }
 
 func (transaction *Transaction) endTransactionSuccess(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	if onlyBroker := onlyBroker(stub); !onlyBroker {
+		return shim.Error(fmt.Sprintf("caller is not broker"))
+	}
+
 	if len(args) != 3 {
 		return shim.Error("incorrect number of arguments, expecting 3")
 	}
@@ -295,6 +320,10 @@ func (transaction *Transaction) endTransactionSuccess(stub shim.ChaincodeStubInt
 }
 
 func (transaction *Transaction) endTransactionFail(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	if onlyBroker := onlyBroker(stub); !onlyBroker {
+		return shim.Error(fmt.Sprintf("caller is not broker"))
+	}
+
 	if len(args) != 3 {
 		return shim.Error("incorrect number of arguments, expecting 3")
 	}
@@ -315,6 +344,10 @@ func (transaction *Transaction) endTransactionFail(stub shim.ChaincodeStubInterf
 }
 
 func (transaction *Transaction) endTransactionRollback(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	if onlyBroker := onlyBroker(stub); !onlyBroker {
+		return shim.Error(fmt.Sprintf("caller is not broker"))
+	}
+
 	if len(args) != 3 {
 		return shim.Error("incorrect number of arguments, expecting 3")
 	}
