@@ -13,7 +13,7 @@ prepare:
 	cd scripts && bash prepare.sh
 
 ## make test-coverage: Test project with cover
-test-coverage:
+test-coverage: prepare
 	@go test -short -coverprofile cover.out -covermode=atomic ${TEST_PKGS}
 	@cat cover.out >> coverage.txt
 
