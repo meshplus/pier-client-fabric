@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -71,6 +72,9 @@ func (s *DataSwapper) get(stub shim.ChaincodeStubInterface, args []string) pb.Re
 		// args[0]: destination service id
 		// args[1]: key
 		var callArgs, argsCb [][]byte
+		typ := make([]byte, 8)
+		binary.BigEndian.PutUint64(typ, 0)
+		callArgs = append(callArgs, typ)
 		callArgs = append(callArgs, []byte(args[1]))
 		argsCb = append(argsCb, []byte(args[1]))
 
