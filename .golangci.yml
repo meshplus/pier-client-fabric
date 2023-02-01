@@ -21,3 +21,6 @@ linters:
     - unconvert
     - unparam
     - unused
+run:
+  # ignore test file
+  tests: false

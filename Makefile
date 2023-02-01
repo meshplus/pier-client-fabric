@@ -5,6 +5,10 @@ CURRENT_TAG =$(shell git describe --abbrev=0 --tags)
 
 GO  = GO111MODULE=on go
 
+ifndef (${TAG})
+  TAG = latest
+endif
+
 help: Makefile
 	@echo "Choose a command run:"
 	@sed -n 's/^##//p' $< | column -t -s ':' | sed -e 's/^/ /'
@@ -23,11 +27,10 @@ fabric1.4:
 	mkdir -p build
 	$(GO) build -o build/fabric-client-1.4 ./*.go
 
-docker:
-	mkdir -p build
-	cd build && rm -rf pier && cp -r ../../pier pier
-	cd ${CURRENT_PATH}
-	docker build -t meshplus/pier-fabric .
+## make build-docker: docker build the project
+build-docker:
+	docker build -t meshplus/pier-fabric:${TAG} .
+	@printf "${GREEN}Build images meshplus/pier-fabric:${TAG} successfully!${NC}\n"
 
 fabric1.4-linux:
 	cd scripts && sh cross_compile.sh linux-amd64 ${CURRENT_PATH}
