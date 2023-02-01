@@ -198,7 +198,7 @@ func (t *Transfer) interchainCharge(stub shim.ChaincodeStubInterface, args []str
 	}
 
 	if len(args) != 4 {
-		return shim.Error("incorrect number of arguments, expect 3")
+		return shim.Error("incorrect number of arguments, expect 4")
 	}
 
 	sender := args[0]

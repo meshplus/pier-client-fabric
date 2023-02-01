@@ -192,16 +192,20 @@ func (c *Client) polling() {
 						SourceReceiptCounter:    make(map[string]uint64),
 					}
 					c.serviceMeta[srcChainServiceID] = meta
-					// ibtp, err := c.GetOutMessage(servicePair, index)
-					// if err != nil {
-					// 	logger.Error("Polling out message",
-					// 		"servicePair", servicePair,
-					// 		"index", index,
-					// 		"error", err.Error())
-					// 	continue
-					// }
+					// if index == 1, need throw event
+					// even if there is likely repeat throwing
+					if index == 1 {
+						ibtp, err := c.GetOutMessage(servicePair, index)
+						if err != nil {
+							logger.Error("Polling out message",
+								"servicePair", servicePair,
+								"index", index,
+								"error", err.Error())
+							continue
+						}
 
-					// c.eventC <- ibtp
+						c.eventC <- ibtp
+					}
 					meta.InterchainCounter[dstChainServiceID] = index
 					continue
 				}
@@ -239,16 +243,18 @@ func (c *Client) polling() {
 						SourceReceiptCounter:    make(map[string]uint64),
 					}
 					c.serviceMeta[srcChainServiceID] = meta
-					ibtp, err := c.GetReceiptMessage(servicePair, index)
-					if err != nil {
-						logger.Error("Polling out message",
-							"servicePair", servicePair,
-							"index", index,
-							"error", err.Error())
-						continue
-					}
+					if index == 1 {
+						ibtp, err := c.GetReceiptMessage(servicePair, index)
+						if err != nil {
+							logger.Error("Polling out message",
+								"servicePair", servicePair,
+								"index", index,
+								"error", err.Error())
+							continue
+						}
 
-					c.eventC <- ibtp
+						c.eventC <- ibtp
+					}
 					meta.ReceiptCounter[dstChainServiceID] = index
 					continue
 				}
@@ -411,7 +417,13 @@ func (c *Client) SubmitReceipt(to string, index uint64, serviceID string, ibtpTy
 		return ret, fmt.Errorf("multi IBTP is not supported yet")
 	}
 
-	_, resp, err := c.InvokeReceipt(serviceID, to, index, uint64(ibtpType), results[0], uint64(proof.TxStatus), proof.MultiSign)
+	var err error
+	var resp *Response
+	if len(results) != 0 {
+		_, resp, err = c.InvokeReceipt(serviceID, to, index, uint64(ibtpType), results[0], uint64(proof.TxStatus), proof.MultiSign)
+	} else {
+		_, resp, err = c.InvokeReceipt(serviceID, to, index, uint64(ibtpType), make([][]byte, 0), uint64(proof.TxStatus), proof.MultiSign)
+	}
 	if err != nil {
 		ret.Status = false
 		ret.Message = fmt.Sprintf("invoke receipt for ibtp to call: %s", err)
