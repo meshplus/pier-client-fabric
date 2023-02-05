@@ -1,8 +1,8 @@
+//nolint:unparam
 package main
 
 import (
 	"context"
-	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -145,10 +145,10 @@ func addressArrayContains(addrs []string, address []byte) bool {
 	return false
 }
 
-func uint64ToBytesInBigEndian(i uint64) []byte {
-	bytes := make([]byte, 8)
+// func uint64ToBytesInBigEndian(i uint64) []byte {
+// 	bytes := make([]byte, 8)
 
-	binary.BigEndian.PutUint64(bytes, i)
+// 	binary.BigEndian.PutUint64(bytes, i)
 
-	return bytes
-}
+// 	return bytes
+// }

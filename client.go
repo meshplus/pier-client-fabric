@@ -1,14 +1,16 @@
+//nolint:dupl,unparam
 package main
 
 import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"github.com/meshplus/bitxhub-core/agency"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/meshplus/bitxhub-core/agency"
 
 	"github.com/Rican7/retry"
 	"github.com/Rican7/retry/strategy"
@@ -129,10 +131,7 @@ func (c *Client) Initialize(configPath string, extra []byte, mode string) error 
 	// 	m = make(map[string]*pb.Interchain)
 	// }
 
-	mgh, err := newFabricHandler(contractmeta.EventFilter, eventC)
-	if err != nil {
-		return err
-	}
+	mgh := newFabricHandler(contractmeta.EventFilter, eventC)
 
 	done := make(chan bool)
 	csm, err := NewConsumer(configPath, contractmeta, mgh, done)
@@ -316,6 +315,7 @@ func (c *Client) getProof(response channel.Response) ([]byte, error) {
 		return nil
 	}, strategy.Wait(2*time.Second)); err != nil {
 		logger.Error("Can't get proof", "error", err.Error())
+		return nil, err
 	}
 
 	return proof, nil
@@ -400,6 +400,9 @@ func (c *Client) SubmitIBTP(from string, index uint64, serviceID string, ibtpTyp
 	destFullID := c.bitxhubID + ":" + c.appchainID + ":" + serviceID
 	servicePair := from + "-" + destFullID
 	ibtp, err := c.GetReceiptMessage(servicePair, index)
+	if err != nil {
+		return nil, err
+	}
 	ret.Result = ibtp
 
 	return ret, nil
@@ -891,11 +894,11 @@ type handler struct {
 	ID          string
 }
 
-func newFabricHandler(eventFilter string, eventC chan *pb.IBTP) (*handler, error) {
+func newFabricHandler(eventFilter string, eventC chan *pb.IBTP) *handler {
 	return &handler{
 		eventC:      eventC,
 		eventFilter: eventFilter,
-	}, nil
+	}
 }
 
 func (h *handler) HandleMessage(deliveries *fab.CCEvent, payload []byte) {
@@ -910,14 +913,14 @@ func (h *handler) HandleMessage(deliveries *fab.CCEvent, payload []byte) {
 	}
 }
 
-func parseChainServiceID(id string) (string, string, string, error) {
-	splits := strings.Split(id, ":")
-	if len(splits) != 3 {
-		return "", "", "", fmt.Errorf("invalid chain service ID: %s", id)
-	}
+// func parseChainServiceID(id string) (string, string, string, error) {
+// 	splits := strings.Split(id, ":")
+// 	if len(splits) != 3 {
+// 		return "", "", "", fmt.Errorf("invalid chain service ID: %s", id)
+// 	}
 
-	return splits[0], splits[1], splits[2], nil
-}
+// 	return splits[0], splits[1], splits[2], nil
+// }
 
 func parseServicePair(servicePair string) (string, string, error) {
 	splits := strings.Split(servicePair, "-")
@@ -928,9 +931,9 @@ func parseServicePair(servicePair string) (string, string, error) {
 	return splits[0], splits[1], nil
 }
 
-func genServicePair(from, to string) string {
-	return fmt.Sprintf("%s-%s", from, to)
-}
+// func genServicePair(from, to string) string {
+// 	return fmt.Sprintf("%s-%s", from, to)
+// }
 
 func (c *Client) GetOffChainData(request *pb.GetDataRequest) (*pb.OffChainDataInfo, error) {
 	//TODO implement me
