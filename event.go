@@ -1,8 +1,6 @@
 package main
 
 import (
-	"strings"
-
 	"github.com/cloudflare/cfssl/log"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/meshplus/bitxhub-model/pb"
@@ -34,14 +32,14 @@ func (ev *Event) Convert2IBTP(timeoutHeight int64, ibtpType pb.IBTP_Type) *pb.IB
 	}
 }
 
-func handleArgs(args string) [][]byte {
-	argsBytes := make([][]byte, 0)
-	as := strings.Split(args, ",")
-	for _, a := range as {
-		argsBytes = append(argsBytes, []byte(a))
-	}
-	return argsBytes
-}
+// func handleArgs(args string) [][]byte {
+// 	argsBytes := make([][]byte, 0)
+// 	as := strings.Split(args, ",")
+// 	for _, a := range as {
+// 		argsBytes = append(argsBytes, []byte(a))
+// 	}
+// 	return argsBytes
+// }
 
 func (ev *Event) encryptPayload() ([]byte, error) {
 	content := &pb.Content{
