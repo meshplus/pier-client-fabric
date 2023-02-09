@@ -7,7 +7,7 @@ require (
 	github.com/cloudflare/cfssl v0.0.0-20190409034051-768cd563887f
 	github.com/ethereum/go-ethereum v1.10.8
 	github.com/fatih/color v1.9.0
-	github.com/gin-gonic/gin v1.7.4
+	github.com/gin-gonic/gin v1.7.7
 	github.com/gobuffalo/packd v1.0.1
 	github.com/gobuffalo/packr/v2 v2.8.3
 	github.com/golang/protobuf v1.5.2
