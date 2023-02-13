@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"time"
 
@@ -152,6 +153,30 @@ var startCMD = cli.Command{
 	},
 }
 
+var (
+	// CurrentCommit current git commit hash
+	CurrentCommit = ""
+	// CurrentBranch current git branch
+	CurrentBranch = ""
+	// CurrentVersion current project version
+	CurrentVersion = "0.0.0"
+	// BuildDate compile date
+	BuildDate = ""
+	// GoVersion system go version
+	GoVersion = runtime.Version()
+	// Platform info
+	Platform = fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH)
+)
+
+var versionCMD = cli.Command{
+	Name:  "version",
+	Usage: "fabric-client version",
+	Action: func(ctx *cli.Context) error {
+		printVersion()
+		return nil
+	},
+}
+
 func main() {
 	app := cli.NewApp()
 	app.Name = "fabric-plugin"
@@ -161,6 +186,7 @@ func main() {
 	app.Commands = []cli.Command{
 		initCMD,
 		startCMD,
+		versionCMD,
 	}
 
 	err := app.Run(os.Args)
@@ -168,4 +194,12 @@ func main() {
 		color.Red(err.Error())
 		os.Exit(-1)
 	}
+}
+
+func printVersion() {
+	fmt.Printf("flt-client version: %s-%s-%s\n", CurrentVersion, CurrentBranch, CurrentCommit)
+	fmt.Printf("App build date: %s\n", BuildDate)
+	fmt.Printf("System version: %s\n", Platform)
+	fmt.Printf("Golang version: %s\n", GoVersion)
+	fmt.Println()
 }

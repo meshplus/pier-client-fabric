@@ -8,6 +8,21 @@ GO  = GO111MODULE=on go
 GREEN=\033[0;32m
 NC=\033[0m
 
+BUILD_DATE = $(shell date +%FT%T)
+GIT_COMMIT = $(shell git log --pretty=format:'%h' -n 1)
+GIT_BRANCH = $(shell git rev-parse --abbrev-ref HEAD)
+ifeq (${GIT_BRANCH},HEAD)
+  APP_VERSION = $(shell git describe --tags HEAD)
+else
+  APP_VERSION = dev
+endif
+
+# build with verison infos
+GOLDFLAGS += -X "main.BuildDate=${BUILD_DATE}"
+GOLDFLAGS += -X "main.CurrentCommit=${GIT_COMMIT}"
+GOLDFLAGS += -X "main.CurrentBranch=${GIT_BRANCH}"
+GOLDFLAGS += -X "main.CurrentVersion=${APP_VERSION}"
+
 help: Makefile
 	@echo "Choose a command run:"
 	@sed -n 's/^##//p' $< | column -t -s ':' | sed -e 's/^/ /'
@@ -24,7 +39,7 @@ test-coverage:
 fabric1.4:
 	@packr2
 	mkdir -p build
-	$(GO) build -o build/fabric-client-1.4 ./*.go
+	$(GO) build -ldflags '${GOLDFLAGS}' -o build/fabric-client-1.4 ./*.go
 	@printf "${GREEN}Build fabric-client-1.4 successfully!${NC}\n"
 
 docker:
