@@ -36,6 +36,9 @@ func (ev *Event) Convert2IBTP(timeoutHeight int64, ibtpType pb.IBTP_Type) *pb.IB
 
 func handleArgs(args string) [][]byte {
 	argsBytes := make([][]byte, 0)
+	if len(args) == 0 {
+		return argsBytes
+	}
 	as := strings.Split(args, ",")
 	for _, a := range as {
 		argsBytes = append(argsBytes, []byte(a))
