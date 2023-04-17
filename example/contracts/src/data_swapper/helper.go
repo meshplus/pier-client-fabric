@@ -2,10 +2,16 @@ package main
 
 import (
 	"fmt"
+
 	"github.com/golang/protobuf/proto"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	pb "github.com/hyperledger/fabric/protos/peer"
 )
+
+type ContractResult struct {
+	Results     [][][]byte `json:"results"`      // results of contract execution
+	MultiStatus []bool     `json:"multi_status"` // status of contract execution
+}
 
 func getChaincodeID(stub shim.ChaincodeStubInterface) (string, error) {
 	sp, err := stub.GetSignedProposal()

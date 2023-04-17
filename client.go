@@ -1,10 +1,9 @@
 package main
 
 import (
-	"encoding/binary"
+	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/meshplus/bitxhub-core/agency"
 	"os"
 	"strconv"
 	"strings"
@@ -21,6 +20,7 @@ import (
 	"github.com/hyperledger/fabric-sdk-go/pkg/client/ledger"
 	"github.com/hyperledger/fabric-sdk-go/pkg/common/providers/fab"
 	"github.com/hyperledger/fabric/common/util"
+	"github.com/meshplus/bitxhub-core/agency"
 	"github.com/meshplus/bitxhub-model/pb"
 )
 
@@ -375,12 +375,7 @@ func (c *Client) SubmitIBTPBatch(from []string, index []uint64, serviceID []stri
 func (c *Client) SubmitIBTP(from string, index uint64, serviceID string, ibtpType pb.IBTP_Type, content *pb.Content, proof *pb.BxhProof, isEncrypted bool) (*pb.SubmitIBTPResponse, error) {
 	ret := &pb.SubmitIBTPResponse{Status: true}
 
-	typ := int64(binary.BigEndian.Uint64(content.Args[0]))
-	if typ == int64(pb.IBTP_Multi) {
-		return ret, fmt.Errorf("multi IBTP is not supported yet")
-	}
-
-	_, resp, err := c.InvokeInterchain(from, index, serviceID, uint64(ibtpType), content.Func, content.Args[1:], uint64(proof.TxStatus), proof.MultiSign, isEncrypted)
+	_, resp, err := c.InvokeInterchain(from, index, serviceID, uint64(ibtpType), content.Func, content.Args, uint64(proof.TxStatus), proof.MultiSign, isEncrypted)
 	if err != nil {
 		ret.Status = false
 		ret.Message = fmt.Sprintf("invoke interchain foribtp to call %s: %s", content.Func, err)
@@ -408,22 +403,15 @@ func (c *Client) SubmitIBTP(from string, index uint64, serviceID string, ibtpTyp
 func (c *Client) SubmitReceipt(to string, index uint64, serviceID string, ibtpType pb.IBTP_Type, result *pb.Result, proof *pb.BxhProof) (*pb.SubmitIBTPResponse, error) {
 	ret := &pb.SubmitIBTPResponse{Status: true}
 
-	var results [][][]byte
+	results := make([][][]byte, 0)
 	for _, s := range result.Data {
 		results = append(results, s.Data)
 	}
 
-	if len(result.MultiStatus) > 1 || (len(result.MultiStatus) == 0 && proof.TxStatus != pb.TransactionStatus_BEGIN) {
-		return ret, fmt.Errorf("multi IBTP is not supported yet")
-	}
-
 	var err error
 	var resp *Response
-	if len(results) != 0 {
-		_, resp, err = c.InvokeReceipt(serviceID, to, index, uint64(ibtpType), results[0], uint64(proof.TxStatus), proof.MultiSign)
-	} else {
-		_, resp, err = c.InvokeReceipt(serviceID, to, index, uint64(ibtpType), make([][]byte, 0), uint64(proof.TxStatus), proof.MultiSign)
-	}
+	_, resp, err = c.InvokeReceipt(serviceID, to, index, uint64(ibtpType), results, result.MultiStatus, uint64(proof.TxStatus), proof.MultiSign)
+
 	if err != nil {
 		ret.Status = false
 		ret.Message = fmt.Sprintf("invoke receipt for ibtp to call: %s", err)
@@ -585,8 +573,8 @@ func (c *Client) InvokeInterchain(srcFullID string, index uint64, destAddr strin
 	return &res, response, nil
 }
 
-func (c *Client) InvokeReceipt(srcAddr string, dstFullID string, index uint64, reqType uint64, result [][]byte, txStatus uint64, multiSign [][]byte) (*channel.Response, *Response, error) {
-	resultBytes, err := json.Marshal(result)
+func (c *Client) InvokeReceipt(srcAddr string, dstFullID string, index uint64, reqType uint64, results [][][]byte, multiStatus []bool, txStatus uint64, multiSign [][]byte) (*channel.Response, *Response, error) {
+	resultsBytes, err := json.Marshal(results)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -594,8 +582,18 @@ func (c *Client) InvokeReceipt(srcAddr string, dstFullID string, index uint64, r
 	if err != nil {
 		return nil, nil, err
 	}
+	multiStatusBytes, err := json.Marshal(multiStatus)
+	if err != nil {
+		return nil, nil, err
+	}
+	result := make([][]byte, len(results))
+	for i := 0; i < len(results); i++ {
+		result[i] = bytes.Join(results[i], []byte(","))
+	}
 
-	args := util.ToChaincodeArgs(srcAddr, dstFullID, strconv.FormatUint(index, 10), strconv.FormatUint(reqType, 10), string(resultBytes), strconv.FormatUint(txStatus, 10), string(multiSignBytes))
+	logger.Info("invoke receipt", "srcAddr", srcAddr, "dstFullID", dstFullID, "index", index, "reqType", reqType, "result", string(bytes.Join(result, []byte(","))), "multiStatus", multiStatus, "txStatus", txStatus, "multiSign", string(multiSignBytes))
+
+	args := util.ToChaincodeArgs(srcAddr, dstFullID, strconv.FormatUint(index, 10), strconv.FormatUint(reqType, 10), string(resultsBytes), string(multiStatusBytes), strconv.FormatUint(txStatus, 10), string(multiSignBytes))
 
 	request := channel.Request{
 		ChaincodeID: c.meta.CCID,
@@ -655,7 +653,7 @@ func (c *Client) GetOutMessage(servicePair string, idx uint64) (*pb.IBTP, error)
 	return c.unpackIBTP(&response, pb.IBTP_INTERCHAIN, proof)
 }
 
-func (c *Client) GetInMessage(servicePair string, index uint64) ([][]byte, []byte, bool, uint64, error) {
+func (c *Client) GetInMessage(servicePair string, index uint64) ([][][]byte, []bool, []byte, bool, uint64, error) {
 	request := channel.Request{
 		ChaincodeID: c.meta.CCID,
 		Fcn:         GetInMessageMethod,
@@ -665,26 +663,26 @@ func (c *Client) GetInMessage(servicePair string, index uint64) ([][]byte, []byt
 	var response channel.Response
 	response, err := c.consumer.ChannelClient.Execute(request)
 	if err != nil {
-		return nil, nil, false, 0, fmt.Errorf("execute req: %w", err)
+		return nil, nil, nil, false, 0, fmt.Errorf("execute req: %w", err)
 	}
 
 	resp := &Receipt{}
 	if err := json.Unmarshal(response.Payload, resp); err != nil {
-		return nil, nil, false, 0, err
+		return nil, nil, nil, false, 0, err
 	}
 
-	results := []string{"true"}
-	if resp.Result.Status == shim.ERROR {
-		results = []string{"false"}
+	contractRes := &ContractResult{}
+	err = json.Unmarshal(resp.Result.Payload, contractRes)
+	if err != nil {
+		return nil, nil, nil, false, 0, fmt.Errorf("unmarshal contract result: %w", err)
 	}
-	results = append(results, strings.Split(string(resp.Result.Payload), ",")...)
 
 	proof, err := c.getProof(response)
 	if err != nil {
-		return nil, nil, false, 0, err
+		return nil, nil, nil, false, 0, err
 	}
 
-	return util.ToChaincodeArgs(results...), proof, resp.Encrypt, resp.Typ, nil
+	return contractRes.Results, contractRes.MultiStatus, proof, resp.Encrypt, resp.Typ, nil
 }
 
 func (c *Client) GetInMeta() (map[string]uint64, error) {
@@ -717,7 +715,7 @@ func (c *Client) GetOutMeta() (map[string]uint64, error) {
 	return c.unpackMap(response)
 }
 
-func (c Client) GetCallbackMeta() (map[string]uint64, error) {
+func (c *Client) GetCallbackMeta() (map[string]uint64, error) {
 	request := channel.Request{
 		ChaincodeID: c.meta.CCID,
 		Fcn:         GetCallbackMetaMethod,
@@ -739,12 +737,7 @@ func (c *Client) CommitCallback(ibtp *pb.IBTP) error {
 func (c *Client) GetReceiptMessage(servicePair string, idx uint64) (*pb.IBTP, error) {
 	var encrypt bool
 
-	result, proof, encrypt, typ, err := c.GetInMessage(servicePair, idx)
-	if err != nil {
-		return nil, err
-	}
-
-	status, err := strconv.ParseBool(string(result[0]))
+	results, multiStatus, proof, encrypt, typ, err := c.GetInMessage(servicePair, idx)
 	if err != nil {
 		return nil, err
 	}
@@ -753,7 +746,7 @@ func (c *Client) GetReceiptMessage(servicePair string, idx uint64) (*pb.IBTP, er
 	if err != nil {
 		return nil, err
 	}
-	return c.generateReceipt(srcServiceID, dstServiceID, idx, result[1:], proof, status, encrypt, typ)
+	return c.generateReceipt(srcServiceID, dstServiceID, idx, results, proof, multiStatus, encrypt, typ)
 }
 
 func (c *Client) InvokeIndexUpdate(from string, index uint64, serviceId string, category pb.IBTP_Category) (*channel.Response, *Response, error) {

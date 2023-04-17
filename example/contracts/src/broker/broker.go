@@ -4,9 +4,10 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"github.com/hyperledger/fabric/common/util"
 	"strconv"
 	"strings"
+
+	"github.com/hyperledger/fabric/common/util"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/hyperledger/fabric/core/chaincode/lib/cid"
@@ -837,6 +838,7 @@ func (broker *Broker) invokeInterchains(stub shim.ChaincodeStubInterface, args [
 }
 
 func (broker *Broker) invokeInterchain(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	// 0: srcFullID, 1: targetCID, 2: index, 3: typ, 4: callFunc, 5: callArgs, 6: txStatus, 7: signature, 8: isEncrypted
 	if len(args) != 9 {
 		return errorResponse("incorrect number of arguments, expecting 9")
 	}
@@ -952,8 +954,9 @@ func (broker *Broker) invokeInterchain(stub shim.ChaincodeStubInterface, args []
 }
 
 func (broker *Broker) invokeReceipt(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	if len(args) != 7 {
-		return errorResponse("incorrect number of arguments, expecting 7")
+	// srcFullID, dstFullID, index, typ, result, multiStatus, txStatus, signatures
+	if len(args) != 8 {
+		return errorResponse("incorrect number of arguments, expecting 8")
 	}
 	srcAddr := args[0]
 	dstFullID := args[1]
@@ -962,16 +965,17 @@ func (broker *Broker) invokeReceipt(stub shim.ChaincodeStubInterface, args []str
 		return errorResponse(fmt.Sprintf("invoke receipt parse index error: %v", err.Error()))
 	}
 
-	var result [][]byte
-	if err := json.Unmarshal([]byte(args[4]), &result); err != nil {
-		return errorResponse(err.Error())
-	}
-	txStatus, err := strconv.ParseUint(args[5], 10, 64)
+	results := args[4]
+
+	// for example: true,true,false……
+	multiStatus := args[5]
+
+	txStatus, err := strconv.ParseUint(args[6], 10, 64)
 	if err != nil {
 		return errorResponse(fmt.Sprintf("invoke receipt parse txStatus error: %v", err.Error()))
 	}
 	var signatures [][]byte
-	if err := json.Unmarshal([]byte(args[6]), &signatures); err != nil {
+	if err := json.Unmarshal([]byte(args[7]), &signatures); err != nil {
 		return errorResponse(fmt.Sprintf("unmarshal signatures failed for %s", args[6]))
 	}
 
@@ -1068,11 +1072,13 @@ func (broker *Broker) invokeReceipt(stub shim.ChaincodeStubInterface, args []str
 		invokeFunc := messages[outServicePair][index].RollBack
 		funcArgs = append(funcArgs, []byte(invokeFunc.Func))
 		funcArgs = append(funcArgs, invokeFunc.Args...)
+		funcArgs = append(funcArgs, []byte(multiStatus))
 	} else {
 		invokeFunc := messages[outServicePair][index].CallBack
 		funcArgs = append(funcArgs, []byte(invokeFunc.Func))
 		funcArgs = append(funcArgs, invokeFunc.Args...)
-		funcArgs = append(funcArgs, result...)
+		funcArgs = append(funcArgs, []byte(results))
+		funcArgs = append(funcArgs, []byte(multiStatus))
 	}
 
 	cid := strings.Split(messages[outServicePair][index].SrcFullID, ":")
@@ -1080,9 +1086,9 @@ func (broker *Broker) invokeReceipt(stub shim.ChaincodeStubInterface, args []str
 	if len(splitedCID) != 2 {
 		return errorResponse(fmt.Sprintf("Target chaincode id %s is not valid", splitedCID[1]))
 	}
-	response := stub.InvokeChaincode(splitedCID[1], funcArgs, splitedCID[0])
-
-	return successResponse(response.Payload)
+	fmt.Printf("funcArgs:%v, args:%s", funcArgs, string(funcArgs[1]))
+	res := stub.InvokeChaincode(splitedCID[1], funcArgs, splitedCID[0])
+	return successResponse(res.Payload)
 }
 
 func (broker *Broker) registerAppchain(stub shim.ChaincodeStubInterface, args []string) pb.Response {

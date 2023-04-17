@@ -5,16 +5,16 @@ import (
 	"github.com/meshplus/bitxhub-model/pb"
 )
 
-func (c *Client) generateReceipt(from, to string, idx uint64, args [][]byte, proof []byte, status, encrypt bool, typ uint64) (*pb.IBTP, error) {
-	var result []*pb.ResultRes
-	res := &pb.ResultRes{Data: args}
-	result = append(result, res)
+type ContractResult struct {
+	Results     [][][]byte `json:"results"`      // results of contract execution
+	MultiStatus []bool     `json:"multi_status"` // status of contract execution
+}
 
-	var multiStatus []bool
-	if typ == uint64(pb.IBTP_RECEIPT_SUCCESS) {
-		multiStatus = append(multiStatus, true)
-	} else {
-		multiStatus = append(multiStatus, false)
+func (c *Client) generateReceipt(from, to string, idx uint64, multiArgs [][][]byte, proof []byte, multiStatus []bool, encrypt bool, typ uint64) (*pb.IBTP, error) {
+	var result []*pb.ResultRes
+	for _, args := range multiArgs {
+		res := &pb.ResultRes{Data: args}
+		result = append(result, res)
 	}
 	results := &pb.Result{Data: result, MultiStatus: multiStatus}
 	content, err := results.Marshal()
@@ -23,8 +23,10 @@ func (c *Client) generateReceipt(from, to string, idx uint64, args [][]byte, pro
 	}
 
 	var packed []byte
-	for _, ele := range args {
-		packed = append(packed, ele...)
+	for _, ele := range multiArgs {
+		for _, val := range ele {
+			packed = append(packed, val...)
+		}
 	}
 
 	payload := pb.Payload{

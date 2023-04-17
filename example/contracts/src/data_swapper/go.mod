@@ -1,6 +1,11 @@
 module github.com/meshplus/data_swapper
 
-go 1.18
+go 1.13
+
+require (
+	github.com/golang/protobuf v1.5.2
+	github.com/hyperledger/fabric v1.4.3
+)
 
 require (
 	github.com/Knetic/govaluate v3.0.0+incompatible // indirect
@@ -8,7 +13,6 @@ require (
 	github.com/fsouza/go-dockerclient v1.7.3 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0 // indirect
 	github.com/hashicorp/go-version v1.3.0 // indirect
-	github.com/hyperledger/fabric v1.4.3
 	github.com/hyperledger/fabric-amcl v0.0.0-20210603140002-2670f91851c8 // indirect
 	github.com/miekg/pkcs11 v1.0.3 // indirect
 	github.com/onsi/gomega v1.14.0 // indirect
