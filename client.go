@@ -142,6 +142,10 @@ func (c *Client) polling() {
 			if err != nil {
 				continue
 			}
+			inMeta, err := c.GetInMeta()
+			if err != nil {
+				continue
+			}
 			for servicePair, index := range outMeta {
 				srcChainServiceID, dstChainServiceID, err := parseServicePair(servicePair)
 				if err != nil {
@@ -161,16 +165,16 @@ func (c *Client) polling() {
 						SourceReceiptCounter:    make(map[string]uint64),
 					}
 					c.serviceMeta[srcChainServiceID] = meta
-					ibtp, err := c.GetOutMessage(servicePair, index)
-					if err != nil {
-						logger.Error("Polling out message",
-							"servicePair", servicePair,
-							"index", index,
-							"error", err.Error())
-						continue
-					}
+					// ibtp, err := c.GetOutMessage(servicePair, index)
+					// if err != nil {
+					// 	logger.Error("Polling out message",
+					// 		"servicePair", servicePair,
+					// 		"index", index,
+					// 		"error", err.Error())
+					// 	continue
+					// }
 
-					c.eventC <- ibtp
+					// c.eventC <- ibtp
 					meta.InterchainCounter[dstChainServiceID] = index
 					continue
 				}
@@ -187,6 +191,53 @@ func (c *Client) polling() {
 
 					c.eventC <- ibtp
 					meta.InterchainCounter[dstChainServiceID]++
+				}
+			}
+			for servicePair, index := range inMeta {
+				srcChainServiceID, dstChainServiceID, err := parseServicePair(servicePair)
+				if err != nil {
+					logger.Error("Polling out invalid service pair",
+						"servicePair", servicePair,
+						"index", index,
+						"error", err.Error())
+					continue
+				}
+				meta, ok := c.serviceMeta[srcChainServiceID]
+				if !ok {
+					meta = &pb.Interchain{
+						ID:                      srcChainServiceID,
+						InterchainCounter:       make(map[string]uint64),
+						ReceiptCounter:          make(map[string]uint64),
+						SourceInterchainCounter: make(map[string]uint64),
+						SourceReceiptCounter:    make(map[string]uint64),
+					}
+					c.serviceMeta[srcChainServiceID] = meta
+					ibtp, err := c.GetReceiptMessage(servicePair, index)
+					if err != nil {
+						logger.Error("Polling out message",
+							"servicePair", servicePair,
+							"index", index,
+							"error", err.Error())
+						continue
+					}
+
+					c.eventC <- ibtp
+					meta.ReceiptCounter[dstChainServiceID] = index
+					continue
+				}
+
+				for i := meta.ReceiptCounter[dstChainServiceID] + 1; i <= index; i++ {
+					ibtp, err := c.GetReceiptMessage(servicePair, i)
+					if err != nil {
+						logger.Error("Polling out message",
+							"servicePair", servicePair,
+							"index", i,
+							"error", err.Error())
+						continue
+					}
+
+					c.eventC <- ibtp
+					meta.ReceiptCounter[dstChainServiceID]++
 				}
 			}
 		case <-c.done:
