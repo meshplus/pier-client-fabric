@@ -48,11 +48,11 @@ linter:
 
 
 contract-zip:
-	@mkdir tmp && cd tmp && unzip ../example/contracts.zip
+	@rm -rf tmp && mkdir tmp && cd tmp && unzip -q ../example/contracts.zip
 	@cd example/contracts/src/broker && cp -r ../../../../tmp/contracts/src/broker/vendor ./
 	@cd example/contracts/src/data_swapper && cp -r ../../../../tmp/contracts/src/data_swapper/vendor ./
 	@cd example/contracts/src/transfer && cp -r ../../../../tmp/contracts/src/transfer/vendor ./
 	@cd example/contracts/src/transaction && cp -r ../../../../tmp/contracts/src/transaction/vendor ./
 	@rm -rf tmp example/contracts.zip
-	@cd example && zip -r contracts.zip contracts
+	@cd example && zip -r -q contracts.zip contracts
 	@printf "${GREEN}Build contracts.zip successfully!${NC}\n"

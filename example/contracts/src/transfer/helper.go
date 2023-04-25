@@ -21,7 +21,10 @@ func getUint64(stub shim.ChaincodeStubInterface, key string) (uint64, error) {
 	if err != nil {
 		return 0, fmt.Errorf("amount must be an interger %w", err)
 	}
-
+	// init value if not exist
+	if value == nil {
+		return 0, nil
+	}
 	ret, err := strconv.ParseUint(string(value), 10, 64)
 	if err != nil {
 		return 0, err
