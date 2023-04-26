@@ -4,6 +4,8 @@ DISTRO = $(shell uname)
 CURRENT_TAG =$(shell git describe --abbrev=0 --tags)
 
 GO  = GO111MODULE=on go
+GREEN=\033[0;32m
+NC=\033[0m
 
 ifndef (${TAG})
   TAG = latest
@@ -26,6 +28,7 @@ fabric1.4:
 	@packr2
 	mkdir -p build
 	$(GO) build -o build/fabric-client-1.4 ./*.go
+	@printf "${GREEN}Build fabric-client-1.4 successfully!${NC}\n"
 
 ## make build-docker: docker build the project
 build-docker:
@@ -42,3 +45,14 @@ release-binary:
 ## make linter: Run golanci-lint
 linter:
 	golangci-lint run
+
+
+contract-zip:
+	@rm -rf tmp && mkdir tmp && cd tmp && unzip -q ../example/contracts.zip
+	@cd example/contracts/src/broker && cp -r ../../../../tmp/contracts/src/broker/vendor ./
+	@cd example/contracts/src/data_swapper && cp -r ../../../../tmp/contracts/src/data_swapper/vendor ./
+	@cd example/contracts/src/transfer && cp -r ../../../../tmp/contracts/src/transfer/vendor ./
+	@cd example/contracts/src/transaction && cp -r ../../../../tmp/contracts/src/transaction/vendor ./
+	@rm -rf tmp example/contracts.zip
+	@cd example && zip -r -q contracts.zip contracts
+	@printf "${GREEN}Build contracts.zip successfully!${NC}\n"

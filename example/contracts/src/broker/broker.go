@@ -4,9 +4,10 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"github.com/hyperledger/fabric/common/util"
 	"strconv"
 	"strings"
+
+	"github.com/hyperledger/fabric/common/util"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/hyperledger/fabric/core/chaincode/lib/cid"
@@ -188,6 +189,8 @@ func (broker *Broker) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		return broker.invokeInterchains(stub, args)
 	case "invokeReceipt":
 		return broker.invokeReceipt(stub, args)
+	case "invokeReceipts":
+		return broker.invokeReceipts(stub, args)
 	case "invokeIndexUpdate":
 		return broker.invokeIndexUpdate(stub, args)
 	case "EmitInterchainEvent":
@@ -210,6 +213,10 @@ func (broker *Broker) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 }
 
 func (broker *Broker) initialize(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	if len(args) != 3 {
+		return shim.Error("incorrect number of arguments, expecting 3")
+	}
+
 	if onlyAdmin := broker.onlyAdmin(stub); !onlyAdmin {
 		return shim.Error(fmt.Sprintf("caller is not admin"))
 	}
@@ -217,10 +224,6 @@ func (broker *Broker) initialize(stub shim.ChaincodeStubInterface, args []string
 	err := broker.initMap(stub)
 	if err != nil {
 		return shim.Error(err.Error())
-	}
-
-	if len(args) != 3 {
-		return shim.Error("incorrect number of arguments, expecting 3")
 	}
 
 	if err := stub.PutState(bxhID, []byte(args[0])); err != nil {
@@ -475,6 +478,9 @@ func (broker *Broker) EmitInterchainEvent(stub shim.ChaincodeStubInterface, args
 
 // 业务合约通过该接口进行注册: 0表示正在审核，1表示审核通过，2表示审核失败
 func (broker *Broker) register(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	if len(args) != 1 {
+		return shim.Error("incorrect number of arguments, expecting 1")
+	}
 	ordered, err := strconv.ParseBool(args[0])
 	if err != nil {
 		return errorResponse(fmt.Sprintf("cannot parse %s to bool", args[0]))
@@ -516,6 +522,9 @@ func (broker *Broker) register(stub shim.ChaincodeStubInterface, args []string) 
 
 // 通过chaincode自带的CID库可以验证调用者的相关信息
 func (broker *Broker) audit(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	if len(args) != 3 {
+		return shim.Error("incorrect number of arguments, expecting 3")
+	}
 	channel := args[0]
 	chaincodeName := args[1]
 	status := args[2]
@@ -765,7 +774,6 @@ func (broker *Broker) invokeInterchains(stub shim.ChaincodeStubInterface, args [
 		signature   [][][]byte
 		isEncrypted []bool
 	)
-
 	if err := json.Unmarshal([]byte(args[0]), &srcFullID); err != nil {
 		return errorResponse(fmt.Sprintf("unmarshal args failed for %s", args[0]))
 	}
@@ -793,8 +801,12 @@ func (broker *Broker) invokeInterchains(stub shim.ChaincodeStubInterface, args [
 	if err := json.Unmarshal([]byte(args[8]), &isEncrypted); err != nil {
 		return errorResponse(fmt.Sprintf("unmarshal args failed for %s", args[8]))
 	}
+	batchLen := len(srcFullID)
+	if batchLen != len(targetCID) || batchLen != len(index) || batchLen != len(typ) || batchLen != len(callFunc) || batchLen != len(callArgs) || batchLen != len(txStatus) || batchLen != len(signature) || batchLen != len(isEncrypted) {
+		return errorResponse("incorrect number of arguments")
+	}
 
-	for idx := 0; idx < 9; idx++ {
+	for idx := 0; idx < batchLen; idx++ {
 		serviceOrdered, err := broker.getServiceOrderedList(stub)
 		if err != nil {
 			return errorResponse(fmt.Sprintf("get service orered list failed: %s", err.Error()))
@@ -837,6 +849,7 @@ func (broker *Broker) invokeInterchains(stub shim.ChaincodeStubInterface, args [
 }
 
 func (broker *Broker) invokeInterchain(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	// 0: srcFullID, 1: targetCID, 2: index, 3: typ, 4: callFunc, 5: callArgs, 6: txStatus, 7: signature, 8: isEncrypted
 	if len(args) != 9 {
 		return errorResponse("incorrect number of arguments, expecting 9")
 	}
@@ -952,8 +965,9 @@ func (broker *Broker) invokeInterchain(stub shim.ChaincodeStubInterface, args []
 }
 
 func (broker *Broker) invokeReceipt(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	if len(args) != 7 {
-		return errorResponse("incorrect number of arguments, expecting 7")
+	// srcFullID, dstFullID, index, typ, result, multiStatus, txStatus, signatures
+	if len(args) != 8 {
+		return errorResponse("incorrect number of arguments, expecting 8")
 	}
 	srcAddr := args[0]
 	dstFullID := args[1]
@@ -962,16 +976,17 @@ func (broker *Broker) invokeReceipt(stub shim.ChaincodeStubInterface, args []str
 		return errorResponse(fmt.Sprintf("invoke receipt parse index error: %v", err.Error()))
 	}
 
-	var result [][]byte
-	if err := json.Unmarshal([]byte(args[4]), &result); err != nil {
-		return errorResponse(err.Error())
-	}
-	txStatus, err := strconv.ParseUint(args[5], 10, 64)
+	results := args[4]
+
+	// for example: true,true,false……
+	multiStatus := args[5]
+
+	txStatus, err := strconv.ParseUint(args[6], 10, 64)
 	if err != nil {
 		return errorResponse(fmt.Sprintf("invoke receipt parse txStatus error: %v", err.Error()))
 	}
 	var signatures [][]byte
-	if err := json.Unmarshal([]byte(args[6]), &signatures); err != nil {
+	if err := json.Unmarshal([]byte(args[7]), &signatures); err != nil {
 		return errorResponse(fmt.Sprintf("unmarshal signatures failed for %s", args[6]))
 	}
 
@@ -1068,11 +1083,13 @@ func (broker *Broker) invokeReceipt(stub shim.ChaincodeStubInterface, args []str
 		invokeFunc := messages[outServicePair][index].RollBack
 		funcArgs = append(funcArgs, []byte(invokeFunc.Func))
 		funcArgs = append(funcArgs, invokeFunc.Args...)
+		funcArgs = append(funcArgs, []byte(multiStatus))
 	} else {
 		invokeFunc := messages[outServicePair][index].CallBack
 		funcArgs = append(funcArgs, []byte(invokeFunc.Func))
 		funcArgs = append(funcArgs, invokeFunc.Args...)
-		funcArgs = append(funcArgs, result...)
+		funcArgs = append(funcArgs, []byte(results))
+		funcArgs = append(funcArgs, []byte(multiStatus))
 	}
 
 	cid := strings.Split(messages[outServicePair][index].SrcFullID, ":")
@@ -1080,9 +1097,88 @@ func (broker *Broker) invokeReceipt(stub shim.ChaincodeStubInterface, args []str
 	if len(splitedCID) != 2 {
 		return errorResponse(fmt.Sprintf("Target chaincode id %s is not valid", splitedCID[1]))
 	}
-	response := stub.InvokeChaincode(splitedCID[1], funcArgs, splitedCID[0])
+	fmt.Printf("funcArgs:%v, args:%s", funcArgs, string(funcArgs[1]))
+	res := stub.InvokeChaincode(splitedCID[1], funcArgs, splitedCID[0])
+	return successResponse(res.Payload)
+}
 
-	return successResponse(response.Payload)
+// invokeReceipts is used to muti time invokeReceipt
+func (broker *Broker) invokeReceipts(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	// args:srcFullIDs, dstFullIDs, indexs, typs, results, multiStatuss, multiTxStatus, multiSignatures
+	if len(args) != 8 {
+		return errorResponse("incorrect number of arguments, expecting 8")
+	}
+	var (
+		srcFullIDs      []string
+		dstFullIDs      []string
+		indexs          []uint64
+		typs            []uint64
+		results         [][][][]byte
+		multiStatus     [][]bool
+		multiTxStatus   []uint64
+		multiSignatures [][][]byte
+	)
+
+	fmt.Printf("receipts args:%v", args)
+	if err := json.Unmarshal([]byte(args[0]), &srcFullIDs); err != nil {
+		return errorResponse(fmt.Sprintf("unmarshal args failed for %s", args[0]))
+	}
+	if err := json.Unmarshal([]byte(args[1]), &dstFullIDs); err != nil {
+		return errorResponse(fmt.Sprintf("unmarshal args failed for %s", args[1]))
+	}
+	if err := json.Unmarshal([]byte(args[2]), &indexs); err != nil {
+		return errorResponse(fmt.Sprintf("unmarshal args failed for %s", args[2]))
+	}
+	if err := json.Unmarshal([]byte(args[3]), &typs); err != nil {
+		return errorResponse(fmt.Sprintf("unmarshal args failed for %s", args[3]))
+	}
+	if err := json.Unmarshal([]byte(args[4]), &results); err != nil {
+		return errorResponse(fmt.Sprintf("unmarshal args failed for %s", args[4]))
+	}
+	if err := json.Unmarshal([]byte(args[5]), &multiStatus); err != nil {
+		return errorResponse(fmt.Sprintf("unmarshal args failed for %s", args[5]))
+	}
+	if err := json.Unmarshal([]byte(args[6]), &multiTxStatus); err != nil {
+		return errorResponse(fmt.Sprintf("unmarshal args failed for %s", args[6]))
+	}
+	if err := json.Unmarshal([]byte(args[7]), &multiSignatures); err != nil {
+		return errorResponse(fmt.Sprintf("unmarshal args failed for %s", args[7]))
+	}
+	batchLen := len(srcFullIDs)
+	if batchLen != len(dstFullIDs) || batchLen != len(indexs) || batchLen != len(typs) || batchLen != len(results) || batchLen != len(multiStatus) || batchLen != len(multiTxStatus) || batchLen != len(multiSignatures) {
+		return errorResponse("args length not match")
+	}
+	for i := 0; i < batchLen; i++ {
+		resBytes, err := json.Marshal(results[i])
+		if err != nil {
+			return errorResponse("marshall results failed")
+		}
+		multiStatusBytes, err := json.Marshal(multiStatus[i])
+		if err != nil {
+			return errorResponse("marshall multiStatus failed")
+		}
+		multiSignatureBytes, err := json.Marshal(multiSignatures[i])
+		if err != nil {
+			return errorResponse("marshall multiSignatures failed")
+		}
+
+		var invokeArgs []string
+		invokeArgs = append(invokeArgs, srcFullIDs[i])
+		invokeArgs = append(invokeArgs, dstFullIDs[i])
+		invokeArgs = append(invokeArgs, strconv.FormatUint(indexs[i], 10))
+		invokeArgs = append(invokeArgs, strconv.FormatUint(typs[i], 10))
+		invokeArgs = append(invokeArgs, string(resBytes))
+		invokeArgs = append(invokeArgs, string(multiStatusBytes))
+		invokeArgs = append(invokeArgs, strconv.FormatUint(multiTxStatus[i], 10))
+		invokeArgs = append(invokeArgs, string(multiSignatureBytes))
+
+		resp := broker.invokeReceipt(stub, invokeArgs)
+		if resp.Status != shim.OK {
+			return errorResponse(resp.Message)
+		}
+	}
+
+	return shim.Success(nil)
 }
 
 func (broker *Broker) registerAppchain(stub shim.ChaincodeStubInterface, args []string) pb.Response {
