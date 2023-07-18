@@ -344,14 +344,16 @@ func (c *Client) InvokeInterchain(from string, index uint64, destAddr string, ca
 		logger.Error("Can't send rollback ibtp back to bitxhub", "err", err.Error())
 	}
 
-	if err != nil {
-		return nil, nil, err
-	}
-
-	logger.Info("response", "cc status", strconv.Itoa(int(res.ChaincodeStatus)), "payload", string(res.Payload))
 	response := &Response{}
-	if err := json.Unmarshal(res.Payload, response); err != nil {
-		return nil, nil, err
+	if err != nil {
+		response.OK = false
+		response.Message = err.Error()
+	} else {
+		logger.Info("response", "cc status", strconv.Itoa(int(res.ChaincodeStatus)), "payload", string(res.Payload))
+
+		if err := json.Unmarshal(res.Payload, response); err != nil {
+			return nil, nil, err
+		}
 	}
 
 	return &res, response, nil
