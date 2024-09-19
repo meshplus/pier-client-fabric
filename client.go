@@ -263,8 +263,8 @@ func (c *Client) polling() {
 					// c.eventC <- ibtp
 					//meta.InterchainCounter[dstChainServiceID] = index
 					//continue
+					meta.InterchainCounter[dstChainServiceID] = 0
 				}
-				meta.InterchainCounter[dstChainServiceID] = 0
 
 				for i := meta.InterchainCounter[dstChainServiceID] + 1; i <= index; i++ {
 					ibtp, err := c.GetOutMessage(servicePair, i)
@@ -311,8 +311,8 @@ func (c *Client) polling() {
 					//c.eventC <- ibtp
 					//meta.ReceiptCounter[dstChainServiceID] = index
 					//continue
+					meta.ReceiptCounter[dstChainServiceID] = 0
 				}
-				meta.ReceiptCounter[dstChainServiceID] = 0
 
 				for i := meta.ReceiptCounter[dstChainServiceID] + 1; i <= index; i++ {
 					ibtp, err := c.GetReceiptMessage(servicePair, i)
